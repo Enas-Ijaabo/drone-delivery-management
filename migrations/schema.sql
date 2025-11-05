@@ -14,6 +14,6 @@ CREATE TABLE IF NOT EXISTS users (
 
 -- Seed demo users (bcrypt; plaintext shown inline)
 INSERT IGNORE INTO users (name, password_hash, type) VALUES
-  ('admin', '$2a$10$CwTycUXWue0Thq9StjUM0uJ8H8bY6qL2r.7xYFQki71oJKVQ1BM8.', 'admin'),   -- password: password
-  ('enduser1', '$2a$10$CwTycUXWue0Thq9StjUM0uJ8H8bY6qL2r.7xYFQki71oJKVQ1BM8.', 'enduser'), -- password: password
-  ('drone1', '$2a$10$CwTycUXWue0Thq9StjUM0uJ8H8bY6qL2r.7xYFQki71oJKVQ1BM8.', 'drone');    -- password: password
+  ('admin', '$2a$10$pwF9DODNqZ.QVgGaMwU3keqWVIvlT02TNWjoUwt21xaJwyyVy66jy', 'admin'),   -- password: password
+  ('enduser1', '$2a$10$pwF9DODNqZ.QVgGaMwU3keqWVIvlT02TNWjoUwt21xaJwyyVy66jy', 'enduser'), -- password: password
+  ('drone1', '$2a$10$pwF9DODNqZ.QVgGaMwU3keqWVIvlT02TNWjoUwt21xaJwyyVy66jy', 'drone');    -- password: password
