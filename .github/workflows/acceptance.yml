@@ -1,0 +1,72 @@
+name: acceptance
+on:
+  push:
+  pull_request:
+
+jobs:
+  at:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Write .env for compose
+        run: |
+          cat > .env <<'EOF'
+          # MySQL (db service)
+          MYSQL_DATABASE=drone
+          MYSQL_USER=app
+          MYSQL_PASSWORD=app
+          MYSQL_ROOT_PASSWORD=dev
+          # App (app service)
+          DB_HOST=db
+          DB_PORT=3306
+          DB_USER=app
+          DB_PASSWORD=app
+          DB_NAME=drone
+          JWT_SECRET=dev-secret
+          JWT_TTL=1h
+          JWT_ISSUER=drone-delivery
+          JWT_AUDIENCE=drone-delivery
+          GIN_MODE=release
+          EOF
+
+      - name: Start stack
+        run: docker compose up -d --build
+
+      - name: Wait for API
+        run: |
+          API_WAIT_TIMEOUT=90
+          for i in $(seq 1 $API_WAIT_TIMEOUT); do
+            if curl -fsS http://localhost:8080/health >/dev/null; then
+              echo "API is up"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "API did not become healthy in time"
+          docker compose ps || true
+          docker compose logs --no-color || true
+          exit 1
+
+      - name: Ensure AT script executable
+        run: chmod +x tests/at/api_smoke.sh
+
+      - name: Run acceptance tests
+        env:
+          BASE: http://localhost:8080
+        run: bash tests/at/api_smoke.sh
+
+      - name: Logs on failure
+        if: failure()
+        run: |
+          docker compose ps || true
+          docker compose logs --no-color || true
+
+      - name: Teardown
+        if: always()
+        run: docker compose down -v
