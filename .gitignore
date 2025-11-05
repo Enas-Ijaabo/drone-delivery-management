@@ -4,7 +4,6 @@
 
 # Local build logs
 build.log
-api
 
 # Local binaries
 bin/
