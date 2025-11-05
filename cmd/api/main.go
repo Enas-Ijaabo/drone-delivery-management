@@ -22,7 +22,6 @@ func main() {
 		getenv("DB_NAME", "drone"),
 	)
 
-	// Wait for DB and run migrations if needed
 	db, err := repo.WaitForDB(cfg, 60, 2*time.Second)
 	if err != nil {
 		log.Fatalf("database not ready: %v", err)
@@ -33,11 +32,15 @@ func main() {
 		log.Fatalf("migration failed: %v", err)
 	}
 
-	mux := http.NewServeMux()
-	mux.Handle("/health", iface.NewHealthHandler())
+	// Gin router
+	r := iface.NewRouter()
 
+	srv := &http.Server{
+		Addr:    ":8080",
+		Handler: r,
+	}
 	log.Println("Ready. Health: http://0.0.0.0:8080/health")
-	log.Fatal(http.ListenAndServe(":8080", mux))
+	log.Fatal(srv.ListenAndServe())
 }
 
 func getenv(key, def string) string {
