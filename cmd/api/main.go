@@ -9,6 +9,7 @@ import (
 
 	iface "github.com/Enas-Ijaabo/drone-delivery-management/internal/interface"
 	"github.com/Enas-Ijaabo/drone-delivery-management/internal/repo"
+	"github.com/Enas-Ijaabo/drone-delivery-management/internal/usecase"
 )
 
 func main() {
@@ -32,8 +33,28 @@ func main() {
 		log.Fatalf("migration failed: %v", err)
 	}
 
+	// Initialize repositories
+	usersRepo := repo.NewUsersRepo(db)
+
+	// Auth config from env
+	jwtSecret := []byte(getenv("JWT_SECRET", "dev-secret"))
+	jwtTTLStr := getenv("JWT_TTL", "1h")
+	jwtTTL, err := time.ParseDuration(jwtTTLStr)
+	if err != nil {
+		log.Printf("invalid JWT_TTL %q, defaulting to 1h: %v", jwtTTLStr, err)
+		jwtTTL = time.Hour
+	}
+	jwtIssuer := getenv("JWT_ISSUER", "drone-delivery")
+	jwtAudience := getenv("JWT_AUDIENCE", "drone-delivery")
+
+	// Initialize usecases
+	authUC := usecase.NewAuthUsecase(usersRepo, jwtSecret, jwtTTL, jwtIssuer, jwtAudience)
+
+	// Initialize interfaces/handlers
+	authHandler := iface.NewAuthHandler(authUC)
+
 	// Gin router
-	r := iface.NewRouter()
+	r := iface.NewRouter(authHandler)
 
 	srv := &http.Server{
 		Addr:    ":8080",
