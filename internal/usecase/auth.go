@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"errors"
+	"strconv"
 	"time"
 
 	"github.com/Enas-Ijaabo/drone-delivery-management/internal/model"
@@ -58,7 +59,7 @@ func (u *AuthUsecase) signToken(user model.User, now time.Time) (string, time.Ti
 	}
 	exp := now.Add(ttl)
 	claims := jwt.MapClaims{
-		"sub":  user.ID,
+		"sub":  strconv.FormatInt(user.ID, 10),
 		"name": user.Name,
 		"role": string(user.Role),
 		"iss":  u.issuer,
