@@ -52,9 +52,11 @@ func main() {
 
 	// Initialize interfaces/handlers
 	authHandler := iface.NewAuthHandler(authUC)
+	// Auth middleware instance
+	authMW := iface.AuthMiddleware(jwtSecret, jwtIssuer, jwtAudience)
 
 	// Gin router
-	r := iface.NewRouter(authHandler)
+	r := iface.NewRouter(authHandler, authMW)
 
 	srv := &http.Server{
 		Addr:    ":8080",
