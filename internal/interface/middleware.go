@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Enas-Ijaabo/drone-delivery-management/internal/model"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -22,6 +23,7 @@ const (
 	jsonKeyError   = "error"
 	jsonKeyMessage = "message"
 	jsonErrUnauth  = "unauthorized"
+	jsonErrForbid  = "forbidden"
 
 	msgMissingInvalidBearer = "missing/invalid bearer token"
 	msgExpiredToken         = "expired token"
@@ -31,6 +33,9 @@ const (
 	msgInvalidAudience      = "invalid token audience"
 	msgMissingExp           = "missing exp"
 	msgMissingClaims        = "missing required claims"
+	msgMissingAuth          = "missing authentication"
+	msgInvalidRole          = "invalid role"
+	msgRoleNotAllowed       = "role not allowed"
 
 	wwwAuthPrefix = "Bearer error=\"invalid_token\", error_description=\""
 	wwwAuthSuffix = "\""
@@ -133,4 +138,28 @@ func extractBearerToken(h string) (string, bool) {
 func unauth(c *gin.Context, msg string) {
 	c.Header(headerWWWAuthenticate, wwwAuthPrefix+msg+wwwAuthSuffix)
 	c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{jsonKeyError: jsonErrUnauth, jsonKeyMessage: msg})
+}
+
+// RequireRoles checks that the authenticated user's role is in the allowed list.
+// Must be used after AuthMiddleware.
+func RequireRoles(allowed ...model.Role) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		role, exists := c.Get(CtxJWTUserRole)
+		if !exists {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{jsonKeyError: jsonErrForbid, jsonKeyMessage: msgMissingAuth})
+			return
+		}
+		roleStr, ok := role.(string)
+		if !ok || roleStr == "" {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{jsonKeyError: jsonErrForbid, jsonKeyMessage: msgInvalidRole})
+			return
+		}
+		for _, r := range allowed {
+			if string(r) == roleStr {
+				c.Next()
+				return
+			}
+		}
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{jsonKeyError: jsonErrForbid, jsonKeyMessage: msgRoleNotAllowed})
+	}
 }
