@@ -29,7 +29,7 @@ func main() {
 	}
 	defer db.Close()
 
-	if err := repo.MigrateIfEmpty(db, "/migrations/schema.sql"); err != nil {
+	if err := repo.MigrateIfEmpty(db, "/migrations"); err != nil {
 		log.Fatalf("migration failed: %v", err)
 	}
 

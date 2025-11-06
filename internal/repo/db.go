@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -48,7 +50,44 @@ func WaitForDB(cfg DBConfig, attempts int, delay time.Duration) (*sql.DB, error)
 	return nil, fmt.Errorf("db not reachable after %d attempts: %w", attempts, lastErr)
 }
 
-func MigrateIfEmpty(db *sql.DB, path string) error {
+func MigrateUp(db *sql.DB, migrationsDir string) error {
+	entries, err := os.ReadDir(migrationsDir)
+	if err != nil {
+		return fmt.Errorf("read migrations dir: %w", err)
+	}
+
+	var upFiles []string
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".up.sql") {
+			upFiles = append(upFiles, e.Name())
+		}
+	}
+	sort.Strings(upFiles)
+
+	if len(upFiles) == 0 {
+		return errors.New("no .up.sql migration files found")
+	}
+
+	for _, filename := range upFiles {
+		path := filepath.Join(migrationsDir, filename)
+		sqlBytes, err := os.ReadFile(path)
+		if err != nil {
+			return fmt.Errorf("read %s: %w", filename, err)
+		}
+		sqlText := strings.TrimSpace(string(sqlBytes))
+		if sqlText == "" {
+			log.Printf("skipping empty migration: %s", filename)
+			continue
+		}
+		if _, err := db.Exec(sqlText); err != nil {
+			return fmt.Errorf("apply %s: %w", filename, err)
+		}
+		log.Printf("migration applied: %s", filename)
+	}
+	return nil
+}
+
+func MigrateIfEmpty(db *sql.DB, migrationsDir string) error {
 	var count int
 	row := db.QueryRow("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE()")
 	if err := row.Scan(&count); err != nil {
@@ -59,18 +98,6 @@ func MigrateIfEmpty(db *sql.DB, path string) error {
 		return nil
 	}
 
-	sqlBytes, err := os.ReadFile(path)
-	if err != nil {
-		return fmt.Errorf("read migration file: %w", err)
-	}
-	sqlText := strings.TrimSpace(string(sqlBytes))
-	if sqlText == "" {
-		return errors.New("migration file is empty; no schema to apply")
-	}
-
-	if _, err := db.Exec(sqlText); err != nil {
-		return fmt.Errorf("apply schema: %w", err)
-	}
-	log.Println("schema applied from:", path)
-	return nil
+	log.Println("database is empty; running migrations...")
+	return MigrateUp(db, migrationsDir)
 }
