@@ -101,16 +101,16 @@ func AuthMiddleware(secret []byte, issuer string, audience string) gin.HandlerFu
 			}
 		}
 
-		if claims.ExpiresAt == nil {
-			unauth(c, msgMissingExp)
-			return
-		}
-		if claims.Name == "" || claims.Role == "" {
-			unauth(c, msgMissingClaims)
-			return
-		}
+	if claims.ExpiresAt == nil {
+		unauth(c, msgMissingExp)
+		return
+	}
+	if claims.Subject == "" || claims.Name == "" || claims.Role == "" {
+		unauth(c, msgMissingClaims)
+		return
+	}
 
-		c.Set(CtxJWTSub, claims.Subject)
+	c.Set(CtxJWTSub, claims.Subject)
 		c.Set(CtxJWTUserName, claims.Name)
 		c.Set(CtxJWTUserRole, claims.Role)
 
