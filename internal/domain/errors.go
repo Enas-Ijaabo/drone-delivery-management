@@ -1,0 +1,77 @@
+package domain
+
+import "fmt"
+
+type DomainError struct {
+	Code    string
+	Message string
+	Details map[string]interface{}
+	Cause   error
+}
+
+func (e *DomainError) Error() string {
+	if e.Cause != nil {
+		return fmt.Sprintf("%s: %v", e.Message, e.Cause)
+	}
+	return e.Message
+}
+
+func (e *DomainError) Unwrap() error {
+	return e.Cause
+}
+
+func (e *DomainError) Status() int {
+	return 400
+}
+
+func NewDomainError(code, message string) *DomainError {
+	return &DomainError{
+		Code:    code,
+		Message: message,
+		Details: make(map[string]interface{}),
+	}
+}
+
+func NewDomainErrorWithDetails(code, message string, details map[string]interface{}) *DomainError {
+	return &DomainError{
+		Code:    code,
+		Message: message,
+		Details: details,
+	}
+}
+
+func NewDomainErrorWithCause(code, message string, cause error) *DomainError {
+	return &DomainError{
+		Code:    code,
+		Message: message,
+		Details: make(map[string]interface{}),
+		Cause:   cause,
+	}
+}
+
+const (
+	ErrCodeOrderStatusTransitionNotAllowed = "order_status_transition_not_allowed"
+	ErrCodeDroneStatusTransitionNotAllowed = "drone_status_transition_not_allowed"
+)
+
+func ErrOrderTransitionNotAllowed(from, to string) *DomainError {
+	return NewDomainErrorWithDetails(
+		ErrCodeOrderStatusTransitionNotAllowed,
+		fmt.Sprintf("transition from %s to %s is not allowed", from, to),
+		map[string]interface{}{
+			"from": from,
+			"to":   to,
+		},
+	)
+}
+
+func ErrDroneTransitionNotAllowed(from, to string) *DomainError {
+	return NewDomainErrorWithDetails(
+		ErrCodeDroneStatusTransitionNotAllowed,
+		fmt.Sprintf("transition from %s to %s is not allowed", from, to),
+		map[string]interface{}{
+			"from": from,
+			"to":   to,
+		},
+	)
+}
