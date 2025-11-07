@@ -17,4 +17,5 @@ INSERT IGNORE INTO users (name, password_hash, type) VALUES
   ('admin', '$2a$10$pwF9DODNqZ.QVgGaMwU3keqWVIvlT02TNWjoUwt21xaJwyyVy66jy', 'admin'),   -- password: password
   ('enduser1', '$2a$10$pwF9DODNqZ.QVgGaMwU3keqWVIvlT02TNWjoUwt21xaJwyyVy66jy', 'enduser'), -- password: password
   ('enduser2', '$2a$10$pwF9DODNqZ.QVgGaMwU3keqWVIvlT02TNWjoUwt21xaJwyyVy66jy', 'enduser'), -- password: password
-  ('drone1', '$2a$10$pwF9DODNqZ.QVgGaMwU3keqWVIvlT02TNWjoUwt21xaJwyyVy66jy', 'drone');    -- password: password
+  ('drone1', '$2a$10$pwF9DODNqZ.QVgGaMwU3keqWVIvlT02TNWjoUwt21xaJwyyVy66jy', 'drone'),    -- password: password
+  ('drone2', '$2a$10$pwF9DODNqZ.QVgGaMwU3keqWVIvlT02TNWjoUwt21xaJwyyVy66jy', 'drone');    -- password: password
