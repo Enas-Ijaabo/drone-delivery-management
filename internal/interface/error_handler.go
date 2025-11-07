@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/Enas-Ijaabo/drone-delivery-management/internal/domain"
+	"github.com/Enas-Ijaabo/drone-delivery-management/internal/model"
 	"github.com/Enas-Ijaabo/drone-delivery-management/internal/repo"
 	"github.com/gin-gonic/gin"
 )
@@ -15,7 +15,6 @@ func ErrorHandlerMiddleware() gin.HandlerFunc {
 
 		if len(c.Errors) > 0 {
 			err := c.Errors.Last().Err
-
 			var repoErr *repo.RepoError
 			if errors.As(err, &repoErr) {
 				c.JSON(repoErr.Status(), gin.H{
@@ -25,7 +24,7 @@ func ErrorHandlerMiddleware() gin.HandlerFunc {
 				return
 			}
 
-			var domainErr *domain.DomainError
+			var domainErr *model.DomainError
 			if errors.As(err, &domainErr) {
 				response := gin.H{
 					"error":   domainErr.Code,

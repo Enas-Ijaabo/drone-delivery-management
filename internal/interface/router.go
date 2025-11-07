@@ -19,6 +19,7 @@ func NewRouter(authHandler *AuthHandler, orderHandler *OrderHandler, authMW gin.
 	enduser.Use(authMW, RequireRoles("enduser"))
 	{
 		enduser.POST("", orderHandler.CreateOrder)
+		enduser.GET("/:id", orderHandler.GetOrder)
 		enduser.POST("/:id/cancel", orderHandler.CancelOrder)
 	}
 

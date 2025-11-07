@@ -44,6 +44,7 @@ func NewRepoErrorWithCause(code, message string, statusCode int, cause error) *R
 const (
 	ErrCodeUserNotFound      = "user_not_found"
 	ErrCodeOrderNotFound     = "order_not_found"
+	ErrCodeDroneNotFound     = "drone_not_found"
 	ErrCodeInvalidForeignKey = "invalid_foreign_key"
 	ErrCodeInvalidEnduserID  = "invalid_enduser_id"
 )
@@ -54,6 +55,10 @@ func ErrUserNotFound() *RepoError {
 
 func ErrOrderNotFound() *RepoError {
 	return NewRepoError(ErrCodeOrderNotFound, "order not found", 404)
+}
+
+func ErrDroneNotFound() *RepoError {
+	return NewRepoError(ErrCodeDroneNotFound, "drone not found", 404)
 }
 
 func ErrInvalidEnduserID() *RepoError {

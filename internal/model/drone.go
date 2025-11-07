@@ -2,8 +2,6 @@ package model
 
 import (
 	"time"
-
-	"github.com/Enas-Ijaabo/drone-delivery-management/internal/domain"
 )
 
 type Drone struct {
@@ -59,7 +57,7 @@ func (d *Drone) IsStatusTransitionAllowed(newStatus DroneStatus) bool {
 
 func (d *Drone) UpdateStatus(newStatus DroneStatus) error {
 	if !d.IsStatusTransitionAllowed(newStatus) {
-		return domain.ErrDroneTransitionNotAllowed(string(d.Status), string(newStatus))
+		return ErrDroneTransitionNotAllowed(string(d.Status), string(newStatus))
 	}
 
 	d.Status = newStatus

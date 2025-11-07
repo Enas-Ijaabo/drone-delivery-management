@@ -36,6 +36,7 @@ func main() {
 	// Initialize repositories
 	usersRepo := repo.NewUsersRepo(db)
 	orderRepo := repo.NewOrderRepo(db)
+	droneRepo := repo.NewDroneRepo(db)
 
 	// Auth config from env
 	jwtSecret := []byte(getenv("JWT_SECRET", "dev-secret"))
@@ -50,7 +51,7 @@ func main() {
 
 	// Initialize usecases
 	authUC := usecase.NewAuthUsecase(usersRepo, jwtSecret, jwtTTL, jwtIssuer, jwtAudience)
-	orderUC := usecase.NewOrderUsecase(orderRepo)
+	orderUC := usecase.NewOrderUsecase(orderRepo, droneRepo)
 
 	// Initialize interfaces/handlers
 	authHandler := iface.NewAuthHandler(authUC)

@@ -2,8 +2,6 @@ package model
 
 import (
 	"time"
-
-	"github.com/Enas-Ijaabo/drone-delivery-management/internal/domain"
 )
 
 type CreateOrderRequest struct {
@@ -12,6 +10,37 @@ type CreateOrderRequest struct {
 	PickupLng  float64
 	DropoffLat float64
 	DropoffLng float64
+}
+
+type DroneLocation struct {
+	Lat float64
+	Lng float64
+}
+
+type OrderDetails struct {
+	Order         Order
+	DroneLocation *DroneLocation
+	ETA           *ETA
+}
+
+func NewOrderDetails(order Order, drone *Drone) OrderDetails {
+	details := OrderDetails{
+		Order: order,
+	}
+
+	if drone != nil {
+		details.DroneLocation = &DroneLocation{
+			Lat: drone.Lat,
+			Lng: drone.Lng,
+		}
+
+		eta := CalculateETA(drone, &order)
+		if eta > 0 {
+			details.ETA = &eta
+		}
+	}
+
+	return details
 }
 
 type OrderStatus string
@@ -67,7 +96,7 @@ type Order struct {
 
 func (o *Order) BelongsTo(userID int64) error {
 	if o.EnduserID != userID {
-		return domain.ErrOrderNotOwned()
+		return ErrOrderNotOwned()
 	}
 	return nil
 }
@@ -100,7 +129,7 @@ func (o *Order) IsStatusTransitionAllowed(newStatus OrderStatus) bool {
 
 func (o *Order) UpdateStatus(newStatus OrderStatus) error {
 	if !o.IsStatusTransitionAllowed(newStatus) {
-		return domain.ErrOrderTransitionNotAllowed(string(o.Status), string(newStatus))
+		return ErrOrderTransitionNotAllowed(string(o.Status), string(newStatus))
 	}
 
 	o.Status = newStatus
