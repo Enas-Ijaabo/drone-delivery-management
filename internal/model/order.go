@@ -6,19 +6,12 @@ import (
 	"github.com/Enas-Ijaabo/drone-delivery-management/internal/domain"
 )
 
-type Order struct {
-	ID              int64
-	EnduserID       int64
-	AssignedDroneID *int64
-	PickupLat       float64
-	PickupLng       float64
-	DropoffLat      float64
-	DropoffLng      float64
-	HandoffLat      *float64
-	HandoffLng      *float64
-	Status          OrderStatus
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+type CreateOrderRequest struct {
+	EnduserID  int64
+	PickupLat  float64
+	PickupLng  float64
+	DropoffLat float64
+	DropoffLng float64
 }
 
 type OrderStatus string
@@ -54,6 +47,33 @@ var allowedOrderTransitions = map[OrderStatus][]OrderStatus{
 	OrderDelivered: {},
 	OrderFailed:    {},
 	OrderCanceled:  {},
+}
+
+type Order struct {
+	ID              int64
+	EnduserID       int64
+	AssignedDroneID *int64
+	PickupLat       float64
+	PickupLng       float64
+	DropoffLat      float64
+	DropoffLng      float64
+	HandoffLat      *float64
+	HandoffLng      *float64
+	Status          OrderStatus
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	CanceledAt      *time.Time
+}
+
+func NewOrder(req CreateOrderRequest) *Order {
+	return &Order{
+		EnduserID:  req.EnduserID,
+		PickupLat:  req.PickupLat,
+		PickupLng:  req.PickupLng,
+		DropoffLat: req.DropoffLat,
+		DropoffLng: req.DropoffLng,
+		Status:     OrderPending,
+	}
 }
 
 func (o *Order) IsStatusTransitionAllowed(newStatus OrderStatus) bool {

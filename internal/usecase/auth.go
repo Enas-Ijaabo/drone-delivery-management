@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/Enas-Ijaabo/drone-delivery-management/internal/model"
-	"github.com/Enas-Ijaabo/drone-delivery-management/internal/repo"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -33,9 +32,6 @@ func NewAuthUsecase(users UsersAuthRepo, secret []byte, ttl time.Duration, issue
 func (u *AuthUsecase) IssueToken(ctx context.Context, login model.Login) (*string, *time.Time, *model.User, error) {
 	user, passwordHash, err := u.users.GetAuthByName(ctx, login.Name)
 	if err != nil {
-		if errors.Is(err, repo.ErrUserNotFound) {
-			return nil, nil, nil, ErrInvalidCredentials
-		}
 		return nil, nil, nil, err
 	}
 

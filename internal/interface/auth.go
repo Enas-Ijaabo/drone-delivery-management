@@ -7,26 +7,27 @@ import (
 	"time"
 
 	"github.com/Enas-Ijaabo/drone-delivery-management/internal/model"
+	"github.com/Enas-Ijaabo/drone-delivery-management/internal/repo"
 	"github.com/Enas-Ijaabo/drone-delivery-management/internal/usecase"
 	"github.com/gin-gonic/gin"
 )
 
-type LoginRequest struct {
+type loginRequest struct {
 	Name     string `json:"name" binding:"required"`
 	Password string `json:"password" binding:"required"`
 }
 
-type UserResponse struct {
+type userResponse struct {
 	ID   int64  `json:"id"`
 	Name string `json:"name"`
 	Type string `json:"type"`
 }
 
-type LoginResponse struct {
+type loginResponse struct {
 	AccessToken string       `json:"access_token"`
 	TokenType   string       `json:"token_type"`
 	ExpiresIn   int64        `json:"expires_in"`
-	User        UserResponse `json:"user"`
+	User        userResponse `json:"user"`
 }
 
 type AuthUsecase interface {
@@ -42,7 +43,7 @@ func NewAuthHandler(uc AuthUsecase) *AuthHandler {
 }
 
 func (h *AuthHandler) AuthTokenHandler(c *gin.Context) {
-	var req LoginRequest
+	var req loginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request", "message": "name and password required"})
 		return
@@ -51,6 +52,13 @@ func (h *AuthHandler) AuthTokenHandler(c *gin.Context) {
 	login := toLoginModel(req)
 	tok, exp, usr, err := h.uc.IssueToken(c.Request.Context(), login)
 	if err != nil {
+		// Check for repo errors (user not found)
+		var repoErr *repo.RepoError
+		if errors.As(err, &repoErr) && repoErr.Code == repo.ErrCodeUserNotFound {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized", "message": "invalid credentials"})
+			return
+		}
+		// Check for invalid credentials
 		if errors.Is(err, usecase.ErrInvalidCredentials) {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized", "message": "invalid credentials"})
 			return
@@ -67,20 +75,20 @@ func (h *AuthHandler) AuthTokenHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, toLoginResponse(*tok, *exp, *usr))
 }
 
-func toLoginModel(req LoginRequest) model.Login {
+func toLoginModel(req loginRequest) model.Login {
 	return model.Login{
 		Name:     req.Name,
 		Password: req.Password,
 	}
 }
 
-func toLoginResponse(token string, exp time.Time, u model.User) LoginResponse {
+func toLoginResponse(token string, exp time.Time, u model.User) loginResponse {
 	now := time.Now().UTC()
 	expiresIn := exp.Unix() - now.Unix()
 	if expiresIn < 0 {
 		expiresIn = 0
 	}
-	return LoginResponse{
+	return loginResponse {
 		AccessToken: token,
 		TokenType:   "bearer",
 		ExpiresIn:   expiresIn,
@@ -88,8 +96,8 @@ func toLoginResponse(token string, exp time.Time, u model.User) LoginResponse {
 	}
 }
 
-func toUserResponse(u model.User) UserResponse {
-	return UserResponse{
+func toUserResponse(u model.User) userResponse {
+	return userResponse{
 		ID:   u.ID,
 		Name: u.Name,
 		Type: string(u.Role),

@@ -35,6 +35,7 @@ func main() {
 
 	// Initialize repositories
 	usersRepo := repo.NewUsersRepo(db)
+	orderRepo := repo.NewOrderRepo(db)
 
 	// Auth config from env
 	jwtSecret := []byte(getenv("JWT_SECRET", "dev-secret"))
@@ -49,14 +50,16 @@ func main() {
 
 	// Initialize usecases
 	authUC := usecase.NewAuthUsecase(usersRepo, jwtSecret, jwtTTL, jwtIssuer, jwtAudience)
+	orderUC := usecase.NewOrderUsecase(orderRepo)
 
 	// Initialize interfaces/handlers
 	authHandler := iface.NewAuthHandler(authUC)
+	orderHandler := iface.NewOrderHandler(orderUC)
 	// Auth middleware instance
 	authMW := iface.AuthMiddleware(jwtSecret, jwtIssuer, jwtAudience)
 
 	// Gin router
-	r := iface.NewRouter(authHandler, authMW)
+	r := iface.NewRouter(authHandler, orderHandler, authMW)
 
 	srv := &http.Server{
 		Addr:    ":8080",

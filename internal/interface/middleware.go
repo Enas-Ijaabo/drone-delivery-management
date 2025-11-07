@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	CtxJWTSub      = "jwt_sub"
+	CtxUserID      = "user_id"
 	CtxJWTUserName = "jwt_user_name"
 	CtxJWTUserRole = "jwt_user_role"
 
@@ -115,7 +115,7 @@ func AuthMiddleware(secret []byte, issuer string, audience string) gin.HandlerFu
 			return
 		}
 
-		c.Set(CtxJWTSub, claims.Subject)
+		c.Set(CtxUserID, claims.Subject)
 		c.Set(CtxJWTUserName, claims.Name)
 		c.Set(CtxJWTUserRole, claims.Role)
 
