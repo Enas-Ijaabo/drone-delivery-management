@@ -364,18 +364,28 @@ test_reserve_vs_cancel() {
 run_test() {
   local test_name="$1"
   local test_command="$2"
-  
   ((TEST_COUNT++))
-  
-  if eval "$test_command" >/dev/null 2>&1; then
+  local rc=0
+  if [[ "${TEST_DEBUG:-}" == "1" ]]; then
+    echo -e "${YELLOW}DEBUG running:${NC} $test_command"
+    set +e
+    eval "$test_command"
+    rc=$?
+    set -e
+  else
+    set +e
+    eval "$test_command" >/dev/null 2>&1
+    rc=$?
+    set -e
+  fi
+  if [[ $rc -eq 0 ]]; then
     ((PASS_COUNT++))
     echo -e "${GREEN}✓${NC} $test_name"
-    return 0
   else
     ((FAIL_COUNT++))
     echo -e "${RED}✗${NC} $test_name"
-    return 1
   fi
+  return 0
 }
 
 pass_test() {
