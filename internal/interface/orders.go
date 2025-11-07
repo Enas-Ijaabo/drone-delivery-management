@@ -21,6 +21,7 @@ type OrderUsecase interface {
 	ReserveOrder(ctx context.Context, droneID, orderID int64) (*model.Order, error)
 	PickupOrder(ctx context.Context, droneID, orderID int64) (*model.Order, error)
 	DeliverOrder(ctx context.Context, droneID, orderID int64) (*model.Order, error)
+	FailOrder(ctx context.Context, droneID, orderID int64) (*model.Order, error)
 }
 
 type OrderHandler struct {
@@ -229,6 +230,34 @@ func (h *OrderHandler) DeliverOrder(c *gin.Context) {
 	}
 
 	order, err := h.uc.DeliverOrder(c.Request.Context(), droneID, orderID)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, toOrderResponse(*order))
+}
+
+func (h *OrderHandler) FailOrder(c *gin.Context) {
+	idStr := c.Param(paramOrderID)
+	orderID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil || orderID <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request", "message": "invalid order id"})
+		return
+	}
+
+	droneIDStr, exists := c.Get(CtxUserID)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized", "message": "missing drone id"})
+		return
+	}
+	droneID, err := strconv.ParseInt(droneIDStr.(string), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized", "message": "invalid drone id"})
+		return
+	}
+
+	order, err := h.uc.FailOrder(c.Request.Context(), droneID, orderID)
 	if err != nil {
 		c.Error(err)
 		return

@@ -30,6 +30,7 @@ func NewRouter(authHandler *AuthHandler, orderHandler *OrderHandler, authMW gin.
 		drone.POST("/:id/reserve", orderHandler.ReserveOrder)
 		drone.POST("/:id/pickup", orderHandler.PickupOrder)
 		drone.POST("/:id/deliver", orderHandler.DeliverOrder)
+		drone.POST("/:id/fail", orderHandler.FailOrder)
 	}
 
 	return r

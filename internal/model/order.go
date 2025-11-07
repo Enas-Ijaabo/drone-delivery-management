@@ -158,3 +158,7 @@ func (o *Order) Deliver() error {
 func (o *Order) Pickup() error {
 	return o.UpdateStatus(OrderPickedUp)
 }
+
+func (o *Order) Fail() error {
+	return o.UpdateStatus(OrderFailed)
+}

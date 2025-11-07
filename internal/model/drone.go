@@ -83,3 +83,11 @@ func (d *Drone) CompleteDelivery() error {
 func (d *Drone) StartDelivery() error {
 	return d.UpdateStatus(DroneDelivering)
 }
+
+func (d *Drone) FailDelivery() error {
+	if err := d.UpdateStatus(DroneIdle); err != nil {
+		return err
+	}
+	d.CurrentOrderID = nil
+	return nil
+}
