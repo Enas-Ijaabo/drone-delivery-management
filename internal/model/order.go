@@ -65,6 +65,13 @@ type Order struct {
 	CanceledAt      *time.Time
 }
 
+func (o *Order) BelongsTo(userID int64) error {
+	if o.EnduserID != userID {
+		return domain.ErrOrderNotOwned()
+	}
+	return nil
+}
+
 func NewOrder(req CreateOrderRequest) *Order {
 	return &Order{
 		EnduserID:  req.EnduserID,

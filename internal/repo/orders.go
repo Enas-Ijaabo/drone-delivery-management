@@ -21,6 +21,18 @@ const (
 		FROM orders
 		WHERE id = ?
 	`
+	getOrderByIDForUpdateQuery = `
+		SELECT id, enduser_id, pickup_lat, pickup_lng, dropoff_lat, dropoff_lng, 
+		       status, assigned_drone_id, handoff_lat, handoff_lng, 
+		       created_at, updated_at, canceled_at
+		FROM orders
+		WHERE id = ? FOR UPDATE
+	`
+	updateOrderStatusQuery = `
+		UPDATE orders 
+		SET status = ?, updated_at = NOW(), canceled_at = CASE WHEN ? = 'canceled' THEN NOW() ELSE canceled_at END
+		WHERE id = ?
+	`
 )
 
 type orderDBO struct {
@@ -45,6 +57,10 @@ type OrderRepo struct {
 
 func NewOrderRepo(db *sql.DB) *OrderRepo {
 	return &OrderRepo{db: db}
+}
+
+func (r *OrderRepo) BeginTx(ctx context.Context) (*sql.Tx, error) {
+	return r.db.BeginTx(ctx, nil)
 }
 
 func (r *OrderRepo) Insert(ctx context.Context, order *model.Order) (*model.Order, error) {
@@ -98,6 +114,40 @@ func (r *OrderRepo) GetByID(ctx context.Context, id int64) (*model.Order, error)
 	}
 
 	return toOrderModel(dbo), nil
+}
+
+func (r *OrderRepo) GetByIDForUpdate(ctx context.Context, tx *sql.Tx, id int64) (*model.Order, error) {
+	var dbo orderDBO
+	err := tx.QueryRowContext(ctx, getOrderByIDForUpdateQuery, id).Scan(
+		&dbo.ID,
+		&dbo.EnduserID,
+		&dbo.PickupLat,
+		&dbo.PickupLng,
+		&dbo.DropoffLat,
+		&dbo.DropoffLng,
+		&dbo.Status,
+		&dbo.AssignedDroneID,
+		&dbo.HandoffLat,
+		&dbo.HandoffLng,
+		&dbo.CreatedAt,
+		&dbo.UpdatedAt,
+		&dbo.CanceledAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrOrderNotFound()
+		}
+		return nil, err
+	}
+	return toOrderModel(dbo), nil
+}
+
+func (r *OrderRepo) UpdateStatusTx(ctx context.Context, tx *sql.Tx, order *model.Order) (*model.Order, error) {
+	_, err := tx.ExecContext(ctx, updateOrderStatusQuery, string(order.Status), string(order.Status), order.ID)
+	if err != nil {
+		return nil, err
+	}
+	return r.GetByIDForUpdate(ctx, tx, order.ID)
 }
 
 func toOrderModel(dbo orderDBO) *model.Order {

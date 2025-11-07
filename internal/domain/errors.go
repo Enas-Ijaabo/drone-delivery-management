@@ -3,10 +3,11 @@ package domain
 import "fmt"
 
 type DomainError struct {
-	Code    string
-	Message string
-	Details map[string]interface{}
-	Cause   error
+	Code       string
+	Message    string
+	Details    map[string]interface{}
+	Cause      error
+	StatusCode int
 }
 
 func (e *DomainError) Error() string {
@@ -21,6 +22,9 @@ func (e *DomainError) Unwrap() error {
 }
 
 func (e *DomainError) Status() int {
+	if e.StatusCode != 0 {
+		return e.StatusCode
+	}
 	return 400
 }
 
@@ -52,17 +56,19 @@ func NewDomainErrorWithCause(code, message string, cause error) *DomainError {
 const (
 	ErrCodeOrderStatusTransitionNotAllowed = "order_status_transition_not_allowed"
 	ErrCodeDroneStatusTransitionNotAllowed = "drone_status_transition_not_allowed"
+	ErrCodeOrderNotOwned                   = "order_not_owned"
 )
 
 func ErrOrderTransitionNotAllowed(from, to string) *DomainError {
-	return NewDomainErrorWithDetails(
-		ErrCodeOrderStatusTransitionNotAllowed,
-		fmt.Sprintf("transition from %s to %s is not allowed", from, to),
-		map[string]interface{}{
+	return &DomainError{
+		Code:    ErrCodeOrderStatusTransitionNotAllowed,
+		Message: fmt.Sprintf("transition from %s to %s is not allowed", from, to),
+		Details: map[string]interface{}{
 			"from": from,
 			"to":   to,
 		},
-	)
+		StatusCode: 409,
+	}
 }
 
 func ErrDroneTransitionNotAllowed(from, to string) *DomainError {
@@ -74,4 +80,13 @@ func ErrDroneTransitionNotAllowed(from, to string) *DomainError {
 			"to":   to,
 		},
 	)
+}
+
+func ErrOrderNotOwned() *DomainError {
+	return &DomainError{
+		Code:       ErrCodeOrderNotOwned,
+		Message:    "order does not belong to user",
+		Details:    make(map[string]interface{}),
+		StatusCode: 403,
+	}
 }

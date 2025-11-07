@@ -157,6 +157,61 @@ status "POST /orders invalid longitude (<-180) -> 400"
 req_auth POST /orders "$ENDUSER_TOKEN" '{"pickup_lat":31.9454,"pickup_lng":-181,"dropoff_lat":31.9632,"dropoff_lng":35.9106}' 400 >/dev/null
 
 # =============================================================================
+# ORDER CANCELLATION TESTS - AUTHENTICATION & AUTHORIZATION
+# =============================================================================
+status "POST /orders/:id/cancel without auth -> 401"
+req POST /orders/1/cancel "" 401 >/dev/null
+
+status "POST /orders/:id/cancel with invalid token -> 401"
+req_auth POST /orders/1/cancel "invalid.token.here" "" 401 >/dev/null
+
+status "POST /orders/:id/cancel with admin token -> 403"
+req_auth POST /orders/1/cancel "$ADMIN_TOKEN" "" 403 >/dev/null
+
+# =============================================================================
+# ORDER CANCELLATION TESTS - SETUP & VALID REQUESTS
+# =============================================================================
+status "Create order for successful cancel test -> 201"
+cancel_order_resp=$(req_auth POST /orders "$ENDUSER_TOKEN" '{"pickup_lat":31.9,"pickup_lng":35.9,"dropoff_lat":31.95,"dropoff_lng":35.95}' 201)
+CANCEL_ORDER_ID=$(echo "$cancel_order_resp" | jq -r '.order_id')
+
+status "POST /orders/:id/cancel (valid pending order) -> 200"
+cancel_resp=$(req_auth POST "/orders/$CANCEL_ORDER_ID/cancel" "$ENDUSER_TOKEN" "" 200)
+echo "$cancel_resp" | jq -e '.order_id and .status=="canceled" and .canceled_at' >/dev/null
+
+status "POST /orders/:id/cancel (already canceled) -> 409"
+req_auth POST "/orders/$CANCEL_ORDER_ID/cancel" "$ENDUSER_TOKEN" "" 409 >/dev/null
+
+# =============================================================================
+# ORDER CANCELLATION TESTS - OWNERSHIP
+# =============================================================================
+status "Get enduser2 token for ownership test"
+enduser2_resp=$(req POST /auth/token '{"name":"enduser2","password":"password"}' 200)
+ENDUSER2_TOKEN=$(echo "$enduser2_resp" | jq -r '.access_token')
+
+status "Create order owned by enduser2 -> 201"
+enduser2_order_resp=$(req_auth POST /orders "$ENDUSER2_TOKEN" '{"pickup_lat":32.0,"pickup_lng":36.0,"dropoff_lat":32.1,"dropoff_lng":36.1}' 201)
+ENDUSER2_ORDER_ID=$(echo "$enduser2_order_resp" | jq -r '.order_id')
+
+status "POST /orders/:id/cancel (not owned by user) -> 403"
+req_auth POST "/orders/$ENDUSER2_ORDER_ID/cancel" "$ENDUSER_TOKEN" "" 403 >/dev/null
+
+# =============================================================================
+# ORDER CANCELLATION TESTS - NOT FOUND & INVALID ID
+# =============================================================================
+status "POST /orders/:id/cancel (non-existent order) -> 404"
+req_auth POST /orders/99999/cancel "$ENDUSER_TOKEN" "" 404 >/dev/null
+
+status "POST /orders/:id/cancel (invalid ID format) -> 400"
+req_auth POST /orders/abc/cancel "$ENDUSER_TOKEN" "" 400 >/dev/null
+
+status "POST /orders/:id/cancel (ID = 0) -> 400"
+req_auth POST /orders/0/cancel "$ENDUSER_TOKEN" "" 400 >/dev/null
+
+status "POST /orders/:id/cancel (negative ID) -> 400"
+req_auth POST /orders/-1/cancel "$ENDUSER_TOKEN" "" 400 >/dev/null
+
+# =============================================================================
 # SUMMARY
 # =============================================================================
 echo ""
@@ -169,5 +224,9 @@ echo "  - Authentication: 8"
 echo "  - Authorization: 3"
 echo "  - Order creation (valid): 5"
 echo "  - Order validation errors: 12"
-echo "Total: 29 test cases"
+echo "  - Order cancellation (auth/authz): 3"
+echo "  - Order cancellation (valid): 2"
+echo "  - Order cancellation (ownership): 2"
+echo "  - Order cancellation (not found): 4"
+echo "Total: 40 test cases"
 echo "========================================="
