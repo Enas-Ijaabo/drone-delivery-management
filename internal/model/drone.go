@@ -63,3 +63,11 @@ func (d *Drone) UpdateStatus(newStatus DroneStatus) error {
 	d.Status = newStatus
 	return nil
 }
+
+func (d *Drone) Reserve(orderID int64) error {
+	if err := d.UpdateStatus(DroneReserved); err != nil {
+		return err
+	}
+	d.CurrentOrderID = &orderID
+	return nil
+}

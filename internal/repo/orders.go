@@ -28,9 +28,14 @@ const (
 		FROM orders
 		WHERE id = ? FOR UPDATE
 	`
-	updateOrderStatusQuery = `
+	updateOrderQuery = `
 		UPDATE orders 
-		SET status = ?, updated_at = NOW(), canceled_at = CASE WHEN ? = 'canceled' THEN NOW() ELSE canceled_at END
+		SET status = ?, 
+		    assigned_drone_id = ?, 
+		    handoff_lat = ?, 
+		    handoff_lng = ?, 
+		    updated_at = NOW(),
+		    canceled_at = CASE WHEN ? = 'canceled' THEN NOW() ELSE canceled_at END
 		WHERE id = ?
 	`
 )
@@ -142,11 +147,21 @@ func (r *OrderRepo) GetByIDForUpdate(ctx context.Context, tx *sql.Tx, id int64) 
 	return toOrderModel(dbo), nil
 }
 
-func (r *OrderRepo) UpdateStatusTx(ctx context.Context, tx *sql.Tx, order *model.Order) (*model.Order, error) {
-	_, err := tx.ExecContext(ctx, updateOrderStatusQuery, string(order.Status), string(order.Status), order.ID)
+func (r *OrderRepo) UpdateTx(ctx context.Context, tx *sql.Tx, order *model.Order) (*model.Order, error) {
+	dbo := toOrderDBO(order)
+
+	_, err := tx.ExecContext(ctx, updateOrderQuery,
+		dbo.Status,
+		dbo.AssignedDroneID,
+		dbo.HandoffLat,
+		dbo.HandoffLng,
+		dbo.Status,
+		dbo.ID,
+	)
 	if err != nil {
 		return nil, err
 	}
+
 	return r.GetByIDForUpdate(ctx, tx, order.ID)
 }
 

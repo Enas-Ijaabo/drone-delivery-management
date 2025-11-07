@@ -17,6 +17,20 @@ const (
 		LEFT JOIN drone_status ds ON u.id = ds.drone_id
 		WHERE u.id = ? AND u.type = 'drone'
 	`
+	getDroneByIDForUpdateQuery = `
+		SELECT u.id, COALESCE(ds.status, 'idle'), ds.current_order_id, 
+		       COALESCE(ds.lat, 0.0), COALESCE(ds.lng, 0.0), 
+		       ds.last_heartbeat_at, u.created_at, u.updated_at
+		FROM users u
+		LEFT JOIN drone_status ds ON u.id = ds.drone_id
+		WHERE u.id = ? AND u.type = 'drone'
+		FOR UPDATE
+	`
+	updateDroneQuery = `
+		UPDATE drone_status 
+		SET status = ?, current_order_id = ?, lat = ?, lng = ?, updated_at = NOW()
+		WHERE drone_id = ?
+	`
 )
 
 type droneDBO struct {
@@ -36,6 +50,10 @@ type DroneRepo struct {
 
 func NewDroneRepo(db *sql.DB) *DroneRepo {
 	return &DroneRepo{db: db}
+}
+
+func (r *DroneRepo) BeginTx(ctx context.Context) (*sql.Tx, error) {
+	return r.db.BeginTx(ctx, nil)
 }
 
 func (r *DroneRepo) GetByID(ctx context.Context, id int64) (*model.Drone, error) {
@@ -58,6 +76,44 @@ func (r *DroneRepo) GetByID(ctx context.Context, id int64) (*model.Drone, error)
 	}
 
 	return dbo.toModel(), nil
+}
+
+func (r *DroneRepo) GetByIDForUpdate(ctx context.Context, tx *sql.Tx, id int64) (*model.Drone, error) {
+	var dbo droneDBO
+	err := tx.QueryRowContext(ctx, getDroneByIDForUpdateQuery, id).Scan(
+		&dbo.ID,
+		&dbo.Status,
+		&dbo.CurrentOrderID,
+		&dbo.Lat,
+		&dbo.Lng,
+		&dbo.LastHeartbeat,
+		&dbo.CreatedAt,
+		&dbo.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrDroneNotFound()
+		}
+		return nil, err
+	}
+
+	return dbo.toModel(), nil
+}
+
+func (r *DroneRepo) UpdateTx(ctx context.Context, tx *sql.Tx, drone *model.Drone) (*model.Drone, error) {
+	dbo := toDroneDBO(drone)
+
+	_, err := tx.ExecContext(ctx, updateDroneQuery,
+		dbo.Status,
+		dbo.CurrentOrderID,
+		dbo.Lat,
+		dbo.Lng,
+		dbo.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return r.GetByIDForUpdate(ctx, tx, drone.ID)
 }
 
 func (dbo *droneDBO) toModel() *model.Drone {
@@ -85,4 +141,31 @@ func (dbo *droneDBO) toModel() *model.Drone {
 	}
 
 	return drone
+}
+
+func toDroneDBO(drone *model.Drone) droneDBO {
+	dbo := droneDBO{
+		ID:     drone.ID,
+		Status: string(drone.Status),
+		Lat:    drone.Lat,
+		Lng:    drone.Lng,
+	}
+
+	if drone.CurrentOrderID != nil {
+		dbo.CurrentOrderID = sql.NullInt64{Int64: *drone.CurrentOrderID, Valid: true}
+	}
+
+	if drone.LastHeartbeat != nil {
+		dbo.LastHeartbeat = sql.NullTime{Time: *drone.LastHeartbeat, Valid: true}
+	}
+
+	if !drone.CreatedAt.IsZero() {
+		dbo.CreatedAt = sql.NullTime{Time: drone.CreatedAt, Valid: true}
+	}
+
+	if !drone.UpdatedAt.IsZero() {
+		dbo.UpdatedAt = sql.NullTime{Time: drone.UpdatedAt, Valid: true}
+	}
+
+	return dbo
 }

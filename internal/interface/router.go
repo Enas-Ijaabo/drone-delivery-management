@@ -23,5 +23,12 @@ func NewRouter(authHandler *AuthHandler, orderHandler *OrderHandler, authMW gin.
 		enduser.POST("/:id/cancel", orderHandler.CancelOrder)
 	}
 
+	// Drone order endpoints
+	drone := r.Group("/orders")
+	drone.Use(authMW, RequireRoles("drone"))
+	{
+		drone.POST("/:id/reserve", orderHandler.ReserveOrder)
+	}
+
 	return r
 }

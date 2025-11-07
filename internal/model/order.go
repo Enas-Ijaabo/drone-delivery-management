@@ -135,3 +135,11 @@ func (o *Order) UpdateStatus(newStatus OrderStatus) error {
 	o.Status = newStatus
 	return nil
 }
+
+func (o *Order) Reserve(droneID int64) error {
+	if err := o.UpdateStatus(OrderReserved); err != nil {
+		return err
+	}
+	o.AssignedDroneID = &droneID
+	return nil
+}
