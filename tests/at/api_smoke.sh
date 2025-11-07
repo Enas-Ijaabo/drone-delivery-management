@@ -37,6 +37,7 @@ echo -e "${BOLD}  Drone Delivery API - Smoke Test Suite${NC}"
 echo -e "${BOLD}========================================${NC}"
 echo ""
 echo -e "${BLUE}Running comprehensive API test coverage...${NC}"
+echo "BASE=${BASE}"
 echo ""
 
 # Check if server is running
@@ -89,16 +90,24 @@ run_suite() {
     # Print the output
     echo "$output"
     
-    # Store results
+    # Decide result
     local result="SKIP"
     if [[ $failed -eq 0 && $passed -gt 0 ]]; then
         result="PASS"
         echo -e "${GREEN}✓ ${suite_name}: ALL TESTS PASSED${NC}"
-    elif [[ $failed -gt 0 ]]; then
-        result="FAIL"
-        echo -e "${RED}✗ ${suite_name}: SOME TESTS FAILED${NC}"
     else
-        echo -e "${YELLOW}⊘ ${suite_name}: NO TESTS RUN${NC}"
+        if [[ $passed -eq 0 && $failed -eq 0 ]]; then
+            # No summary detected. If suite exited non-zero, treat as FAIL, not SKIP
+            if [[ $exit_code -ne 0 ]]; then
+                result="FAIL"
+                echo -e "${RED}✗ ${suite_name}: SUITE EXITED EARLY (exit ${exit_code})${NC}"
+            else
+                echo -e "${YELLOW}⊘ ${suite_name}: NO TESTS RUN${NC}"
+            fi
+        else
+            result="FAIL"
+            echo -e "${RED}✗ ${suite_name}: SOME TESTS FAILED${NC}"
+        fi
     fi
     
     SUITE_NAMES+=("$suite_name")
@@ -134,7 +143,11 @@ print_final_summary() {
         if [[ "$result" == "PASS" ]]; then
             echo -e "${GREEN}✓ PASS${NC} (${passed}/${total})"
         elif [[ "$result" == "FAIL" ]]; then
-            echo -e "${RED}✗ FAIL${NC} (${passed}/${total}, ${failed} failed)"
+            if [[ $total -gt 0 ]]; then
+              echo -e "${RED}✗ FAIL${NC} (${passed}/${total}, ${failed} failed)"
+            else
+              echo -e "${RED}✗ FAIL${NC} (suite error)"
+            fi
         else
             echo -e "${YELLOW}⊘ SKIP${NC}"
         fi
