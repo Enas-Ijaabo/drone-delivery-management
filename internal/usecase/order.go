@@ -183,3 +183,49 @@ func (uc *OrderUsecase) DeliverOrder(ctx context.Context, droneID, orderID int64
 
 	return updatedOrder, nil
 }
+
+func (uc *OrderUsecase) PickupOrder(ctx context.Context, droneID, orderID int64) (*model.Order, error) {
+	tx, err := uc.orderRepo.BeginTx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	order, err := uc.orderRepo.GetByIDForUpdate(ctx, tx, orderID)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := order.IsAssignedTo(droneID); err != nil {
+		return nil, err
+	}
+
+	drone, err := uc.droneRepo.GetByIDForUpdate(ctx, tx, droneID)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := order.Pickup(); err != nil {
+		return nil, err
+	}
+
+	if err := drone.StartDelivery(); err != nil {
+		return nil, err
+	}
+
+	updatedOrder, err := uc.orderRepo.UpdateTx(ctx, tx, order)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = uc.droneRepo.UpdateTx(ctx, tx, drone)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return updatedOrder, nil
+}

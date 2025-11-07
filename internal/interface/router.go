@@ -28,6 +28,7 @@ func NewRouter(authHandler *AuthHandler, orderHandler *OrderHandler, authMW gin.
 	drone.Use(authMW, RequireRoles("drone"))
 	{
 		drone.POST("/:id/reserve", orderHandler.ReserveOrder)
+		drone.POST("/:id/pickup", orderHandler.PickupOrder)
 		drone.POST("/:id/deliver", orderHandler.DeliverOrder)
 	}
 

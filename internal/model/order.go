@@ -154,3 +154,7 @@ func (o *Order) Reserve(droneID int64) error {
 func (o *Order) Deliver() error {
 	return o.UpdateStatus(OrderDelivered)
 }
+
+func (o *Order) Pickup() error {
+	return o.UpdateStatus(OrderPickedUp)
+}
