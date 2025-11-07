@@ -71,3 +71,11 @@ func (d *Drone) Reserve(orderID int64) error {
 	d.CurrentOrderID = &orderID
 	return nil
 }
+
+func (d *Drone) CompleteDelivery() error {
+	if err := d.UpdateStatus(DroneIdle); err != nil {
+		return err
+	}
+	d.CurrentOrderID = nil
+	return nil
+}

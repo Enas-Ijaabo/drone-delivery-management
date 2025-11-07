@@ -101,6 +101,13 @@ func (o *Order) BelongsTo(userID int64) error {
 	return nil
 }
 
+func (o *Order) IsAssignedTo(droneID int64) error {
+	if o.AssignedDroneID == nil || *o.AssignedDroneID != droneID {
+		return ErrOrderNotAssignedToDrone()
+	}
+	return nil
+}
+
 func NewOrder(req CreateOrderRequest) *Order {
 	return &Order{
 		EnduserID:  req.EnduserID,
@@ -142,4 +149,8 @@ func (o *Order) Reserve(droneID int64) error {
 	}
 	o.AssignedDroneID = &droneID
 	return nil
+}
+
+func (o *Order) Deliver() error {
+	return o.UpdateStatus(OrderDelivered)
 }

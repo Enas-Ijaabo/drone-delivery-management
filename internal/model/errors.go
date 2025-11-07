@@ -57,6 +57,7 @@ const (
 	ErrCodeOrderStatusTransitionNotAllowed = "order_status_transition_not_allowed"
 	ErrCodeDroneStatusTransitionNotAllowed = "drone_status_transition_not_allowed"
 	ErrCodeOrderNotOwned                   = "order_not_owned"
+	ErrCodeOrderNotAssignedToDrone         = "order_not_assigned_to_drone"
 )
 
 func ErrOrderTransitionNotAllowed(from, to string) *DomainError {
@@ -88,5 +89,14 @@ func ErrOrderNotOwned() *DomainError {
 		Message:    "order does not belong to user",
 		Details:    make(map[string]interface{}),
 		StatusCode: 403,
+	}
+}
+
+func ErrOrderNotAssignedToDrone() *DomainError {
+	return &DomainError{
+		Code:       ErrCodeOrderNotAssignedToDrone,
+		Message:    "order is not assigned to this drone",
+		Details:    make(map[string]interface{}),
+		StatusCode: 404,
 	}
 }
