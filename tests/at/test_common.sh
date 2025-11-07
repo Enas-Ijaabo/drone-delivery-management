@@ -30,12 +30,23 @@ req() {
   tmp="$(mktemp)"
   local code
   
+  set +e
   if [[ -n "$body" ]]; then
     code=$(curl -sS -o "$tmp" -w "%{http_code}" -X "$method" "$BASE$path" \
       -H 'Content-Type: application/json' \
-      --data "$body")
+      --data "$body" 2>&1)
   else
-    code=$(curl -sS -o "$tmp" -w "%{http_code}" -X "$method" "$BASE$path")
+    code=$(curl -sS -o "$tmp" -w "%{http_code}" -X "$method" "$BASE$path" 2>&1)
+  fi
+  local curl_exit=$?
+  set -e
+  
+  # If curl failed completely, show error
+  if [[ $curl_exit -ne 0 ]]; then
+    echo "ERROR: curl failed (exit $curl_exit) for $method $BASE$path" >&2
+    echo "Output: $code" >&2
+    rm -f "$tmp"
+    return 1
   fi
   
   LAST_RESPONSE=$(cat "$tmp")
@@ -58,14 +69,25 @@ req_auth() {
   tmp="$(mktemp)"
   local code
   
+  set +e
   if [[ -n "$body" ]]; then
     code=$(curl -sS -o "$tmp" -w "%{http_code}" -X "$method" "$BASE$path" \
       -H 'Content-Type: application/json' \
       -H "Authorization: Bearer $token" \
-      --data "$body")
+      --data "$body" 2>&1)
   else
     code=$(curl -sS -o "$tmp" -w "%{http_code}" -X "$method" "$BASE$path" \
-      -H "Authorization: Bearer $token")
+      -H "Authorization: Bearer $token" 2>&1)
+  fi
+  local curl_exit=$?
+  set -e
+  
+  # If curl failed completely, show error
+  if [[ $curl_exit -ne 0 ]]; then
+    echo "ERROR: curl failed (exit $curl_exit) for $method $BASE$path" >&2
+    echo "Output: $code" >&2
+    rm -f "$tmp"
+    return 1
   fi
   
   LAST_RESPONSE=$(cat "$tmp")
@@ -88,9 +110,19 @@ req_auth_raw() {
   tmp="$(mktemp)"
   local code
   
+  set +e
   code=$(curl -sS -o "$tmp" -w "%{http_code}" -X "$method" "$BASE$path" \
     -H "Authorization: Bearer $token" \
-    --data-raw "$body")
+    --data-raw "$body" 2>&1)
+  local curl_exit=$?
+  set -e
+  
+  if [[ $curl_exit -ne 0 ]]; then
+    echo "ERROR: curl failed (exit $curl_exit) for $method $BASE$path" >&2
+    echo "Output: $code" >&2
+    rm -f "$tmp"
+    return 1
+  fi
   
   LAST_RESPONSE=$(cat "$tmp")
   LAST_STATUS="$code"
@@ -112,7 +144,11 @@ get_token() {
   local username="$1"
   local password="$2"
   local resp
-  resp=$(req POST /auth/token "{\"name\":\"$username\",\"password\":\"$password\"}" 200 2>/dev/null)
+  resp=$(req POST /auth/token "{\"name\":\"$username\",\"password\":\"$password\"}" 200)
+  if [[ $? -ne 0 ]]; then
+    echo "ERROR: Failed to get token for user: $username" >&2
+    return 1
+  fi
   echo "$resp" | jq -r '.access_token'
 }
 
@@ -125,7 +161,11 @@ create_order() {
   
   local resp
   resp=$(req_auth POST /orders "$token" \
-    "{\"pickup_lat\":$pickup_lat,\"pickup_lng\":$pickup_lng,\"dropoff_lat\":$dropoff_lat,\"dropoff_lng\":$dropoff_lng}" 201 2>/dev/null)
+    "{\"pickup_lat\":$pickup_lat,\"pickup_lng\":$pickup_lng,\"dropoff_lat\":$dropoff_lat,\"dropoff_lng\":$dropoff_lng}" 201)
+  if [[ $? -ne 0 ]]; then
+    echo "ERROR: Failed to create order" >&2
+    return 1
+  fi
   echo "$resp" | jq -r '.order_id'
 }
 
