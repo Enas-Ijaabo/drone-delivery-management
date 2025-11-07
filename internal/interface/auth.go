@@ -88,7 +88,7 @@ func toLoginResponse(token string, exp time.Time, u model.User) loginResponse {
 	if expiresIn < 0 {
 		expiresIn = 0
 	}
-	return loginResponse {
+	return loginResponse{
 		AccessToken: token,
 		TokenType:   "bearer",
 		ExpiresIn:   expiresIn,

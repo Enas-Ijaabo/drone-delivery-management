@@ -20,6 +20,6 @@ func NewOrderUsecase(orderRepo OrderRepo) *OrderUsecase {
 
 func (uc *OrderUsecase) CreateOrder(ctx context.Context, req model.CreateOrderRequest) (*model.Order, error) {
 	order := model.NewOrder(req)
-	
+
 	return uc.orderRepo.Insert(ctx, order)
 }
