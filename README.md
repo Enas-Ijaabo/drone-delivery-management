@@ -2,7 +2,7 @@
 
 ## Structure (DDD)
 - `cmd/api` – wiring/bootstrap (main)
-- `internal/model` – entities, value objects, invariants
+- `internal/model` – entities, value objects, domain logic
 - `internal/usecase` – application services (business flows)
 - `internal/interface` – HTTP handlers, middleware, DTOs
 - `internal/repo` – repository interfaces + MySQL impl
