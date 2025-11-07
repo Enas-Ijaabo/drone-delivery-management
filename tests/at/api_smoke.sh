@@ -11,9 +11,6 @@ cd "$(dirname "$0")"
 # Source common utilities
 source ./test_common.sh
 
-# Ensure BASE is set (fallback to localhost) before any usage
-: "${BASE:=http://localhost:8080}"
-
 # Color codes for output
 readonly GREEN='\033[0;32m'
 readonly RED='\033[0;31m'
