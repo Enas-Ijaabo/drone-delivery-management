@@ -13,6 +13,12 @@ CREATE TABLE IF NOT EXISTS drone_status (
   CONSTRAINT fk_drone_status_user FOREIGN KEY (drone_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Seed status rows for existing drones so they start as idle
+INSERT IGNORE INTO drone_status (drone_id, status, current_order_id, lat, lng)
+SELECT id, 'idle', NULL, 0.0, 0.0
+FROM users
+WHERE type = 'drone';
+
 -- Create orders table
 CREATE TABLE IF NOT EXISTS orders (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
