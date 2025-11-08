@@ -58,6 +58,8 @@ const (
 	ErrCodeDroneStatusTransitionNotAllowed = "drone_status_transition_not_allowed"
 	ErrCodeOrderNotOwned                   = "order_not_owned"
 	ErrCodeOrderNotAssignedToDrone         = "order_not_assigned_to_drone"
+	ErrCodeInvalidLatitude                 = "invalid_latitude"
+	ErrCodeInvalidLongitude                = "invalid_longitude"
 )
 
 func ErrOrderTransitionNotAllowed(from, to string) *DomainError {
@@ -98,5 +100,23 @@ func ErrOrderNotAssignedToDrone() *DomainError {
 		Message:    "order is not assigned to this drone",
 		Details:    make(map[string]interface{}),
 		StatusCode: 404,
+	}
+}
+
+func ErrInvalidLatitude(lat float64) *DomainError {
+	return &DomainError{
+		Code:       ErrCodeInvalidLatitude,
+		Message:    "latitude must be between -90 and 90",
+		Details:    map[string]interface{}{"lat": lat},
+		StatusCode: 400,
+	}
+}
+
+func ErrInvalidLongitude(lng float64) *DomainError {
+	return &DomainError{
+		Code:       ErrCodeInvalidLongitude,
+		Message:    "longitude must be between -180 and 180",
+		Details:    map[string]interface{}{"lng": lng},
+		StatusCode: 400,
 	}
 }

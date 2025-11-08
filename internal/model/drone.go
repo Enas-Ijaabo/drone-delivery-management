@@ -4,6 +4,11 @@ import (
 	"time"
 )
 
+type DroneHeartbeat struct {
+	Lat float64
+	Lng float64
+}
+
 type Drone struct {
 	ID             int64
 	Status         DroneStatus
@@ -26,10 +31,12 @@ const (
 var allowedDroneTransitions = map[DroneStatus][]DroneStatus{
 	DroneIdle: {
 		DroneReserved,
+		DroneBroken,
 	},
 	DroneReserved: {
 		DroneDelivering,
 		DroneIdle,
+		DroneBroken,
 	},
 	DroneDelivering: {
 		DroneIdle,
@@ -89,5 +96,27 @@ func (d *Drone) FailDelivery() error {
 		return err
 	}
 	d.CurrentOrderID = nil
+	return nil
+}
+
+func (d *Drone) Validate() error {
+	if d.Lat < -90 || d.Lat > 90 {
+		return ErrInvalidLatitude(d.Lat)
+	}
+	if d.Lng < -180 || d.Lng > 180 {
+		return ErrInvalidLongitude(d.Lng)
+	}
+	return nil
+}
+
+func (d *Drone) ApplyHeartbeat(update DroneHeartbeat, now time.Time) error {
+	if err := d.Validate(); err != nil {
+		return err
+	}
+
+	d.Lat = update.Lat
+	d.Lng = update.Lng
+	d.LastHeartbeat = &now
+
 	return nil
 }

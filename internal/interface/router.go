@@ -4,7 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func NewRouter(authHandler *AuthHandler, orderHandler *OrderHandler, authMW gin.HandlerFunc) *gin.Engine {
+func NewRouter(authHandler *AuthHandler, orderHandler *OrderHandler, droneWSHandler *DroneWSHandler, authMW gin.HandlerFunc) *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery(), ErrorHandlerMiddleware())
 
@@ -31,6 +31,12 @@ func NewRouter(authHandler *AuthHandler, orderHandler *OrderHandler, authMW gin.
 		drone.POST("/:id/pickup", orderHandler.PickupOrder)
 		drone.POST("/:id/deliver", orderHandler.DeliverOrder)
 		drone.POST("/:id/fail", orderHandler.FailOrder)
+	}
+
+	ws := r.Group("/ws")
+	ws.Use(authMW, RequireRoles("drone"))
+	{
+		ws.GET("/heartbeat", droneWSHandler.HandleHeartbeat)
 	}
 
 	return r

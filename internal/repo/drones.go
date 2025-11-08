@@ -28,7 +28,7 @@ const (
 	`
 	updateDroneQuery = `
 		UPDATE drone_status 
-		SET status = ?, current_order_id = ?, lat = ?, lng = ?, updated_at = NOW()
+		SET status = ?, current_order_id = ?, lat = ?, lng = ?, last_heartbeat_at = ?, updated_at = NOW()
 		WHERE drone_id = ?
 	`
 )
@@ -39,7 +39,7 @@ type droneDBO struct {
 	CurrentOrderID sql.NullInt64 `dbo:"current_order_id"`
 	Lat            float64       `dbo:"lat"`
 	Lng            float64       `dbo:"lng"`
-	LastHeartbeat  sql.NullTime  `dbo:"last_heartbeat"`
+	LastHeartbeat  sql.NullTime  `dbo:"last_heartbeat_at"`
 	CreatedAt      sql.NullTime  `dbo:"created_at"`
 	UpdatedAt      sql.NullTime  `dbo:"updated_at"`
 }
@@ -108,6 +108,7 @@ func (r *DroneRepo) UpdateTx(ctx context.Context, tx *sql.Tx, drone *model.Drone
 		dbo.CurrentOrderID,
 		dbo.Lat,
 		dbo.Lng,
+		dbo.LastHeartbeat,
 		dbo.ID)
 	if err != nil {
 		return nil, err

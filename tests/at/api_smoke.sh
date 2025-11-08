@@ -23,7 +23,7 @@ readonly BOLD='\033[1m'
 readonly NC='\033[0m' # No Color
 
 # Test suite tracking (bash 3.2 compatible)
-TEST_SUITES="test_health.sh test_auth.sh test_order_create.sh test_order_get.sh test_order_cancel.sh test_reserve.sh test_pickup.sh test_deliver.sh test_fail.sh test_workflows.sh"
+TEST_SUITES="test_health.sh test_auth.sh test_order_create.sh test_order_get.sh test_order_cancel.sh test_reserve.sh test_pickup.sh test_deliver.sh test_fail.sh test_workflows.sh test_heartbeat.sh"
 
 # Parallel arrays for results (bash 3.2 compatible)
 SUITE_NAMES=()
