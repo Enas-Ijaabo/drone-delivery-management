@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
 # Test suite for POST /orders/:id/reserve
-set -euo pipefail
 
 source "$(dirname "$0")/test_common.sh"
 set +e
 set +u
 set +o pipefail
+
+TEST_COUNT=0
+PASS_COUNT=0
+FAIL_COUNT=0
 
 reset_drones
 ADMIN_TOKEN=$(get_token "admin" "password")

@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # Common test utilities and helper functions
-set -euo pipefail
 
 BASE="${BASE:-http://localhost:8080}"
 
@@ -39,7 +38,6 @@ req() {
     code=$(curl -sS -o "$tmp" -w "%{http_code}" -X "$method" "$BASE$path" 2>&1)
   fi
   local curl_exit=$?
-  set -e
   
   # If curl failed completely, show error
   if [[ $curl_exit -ne 0 ]]; then
@@ -80,7 +78,6 @@ req_auth() {
       -H "Authorization: Bearer $token" 2>&1)
   fi
   local curl_exit=$?
-  set -e
   
   # If curl failed completely, show error
   if [[ $curl_exit -ne 0 ]]; then
@@ -115,7 +112,6 @@ req_auth_raw() {
     -H "Authorization: Bearer $token" \
     --data-raw "$body" 2>&1)
   local curl_exit=$?
-  set -e
   
   if [[ $curl_exit -ne 0 ]]; then
     echo "ERROR: curl failed (exit $curl_exit) for $method $BASE$path" >&2
@@ -375,12 +371,10 @@ run_test() {
     set +e
     eval "$test_command"
     rc=$?
-    set -e
   else
     set +e
     eval "$test_command" >/dev/null 2>&1
     rc=$?
-    set -e
   fi
   if [[ $rc -eq 0 ]]; then
     ((PASS_COUNT++))
