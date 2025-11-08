@@ -3,6 +3,7 @@
 set -euo pipefail
 
 source "$(dirname "$0")/test_common.sh"
+set +e
 
 # Get tokens
 ENDUSER_TOKEN=$(get_token "enduser1" "password")

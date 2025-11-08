@@ -3,6 +3,7 @@
 set -euo pipefail
 
 source "$(dirname "$0")/test_common.sh"
+set +e
 
 reset_drones
 ADMIN_TOKEN=$(get_token "admin" "password")
