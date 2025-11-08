@@ -14,6 +14,7 @@ FAIL_COUNT=0
 # Get tokens
 ENDUSER_TOKEN=$(get_token "enduser1" "password")
 ENDUSER2_TOKEN=$(get_token "enduser2" "password")
+DRONE_TOKEN=$(get_token "drone1" "password")
 
 # =============================================================================
 # AUTH & AUTHORIZATION
@@ -67,8 +68,6 @@ run_test "Order absent eta_minutes" "verify_json_field_absent '.eta_minutes'"
 # =============================================================================
 test_section "GET Order - With Drone"
 
-reset_drones  # Ensure drones are in idle state
-DRONE_TOKEN=$(get_token "drone1" "password")
 ORDER3_ID=$(create_order "$ENDUSER_TOKEN" 31.9 35.9 32.0 36.0)
 
 # Reserve order with drone
@@ -96,5 +95,7 @@ req_auth POST /orders/$ORDER3_ID/deliver "$DRONE_TOKEN" '' 200 >/dev/null
 run_test "GET /orders/:id (delivered order) -> 200" \
   "req_auth GET /orders/$ORDER3_ID '$ENDUSER_TOKEN' '' 200"
 run_test "Delivered status" "verify_json_field '.status' 'delivered'"
+
+# ORDER3_ID is now in delivered state (terminal), drone is free
 
 print_summary "GET /orders/:id"

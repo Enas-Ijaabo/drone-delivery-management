@@ -6,8 +6,6 @@ set +e
 set +u
 set +o pipefail
 
-reset_drones
-
 # Get tokens
 ADMIN_TOKEN=$(get_token "admin" "password")
 ENDUSER_TOKEN=$(get_token "enduser1" "password")
@@ -41,16 +39,16 @@ run_test "POST /orders/:id/deliver with admin token -> 403" \
 test_section "Deliver Order - Invalid Order IDs"
 
 run_test "POST /orders/:id/deliver (invalid format) -> 400" \
-  "req_auth POST /orders/abc/deliver '$DRONE1_TOKEN' '' 400"
+  "req_auth POST /orders/abc/deliver $DRONE1_TOKEN '' 400"
 
 run_test "POST /orders/:id/deliver (zero) -> 400" \
-  "req_auth POST /orders/0/deliver '$DRONE1_TOKEN' '' 400"
+  "req_auth POST /orders/0/deliver $DRONE1_TOKEN '' 400"
 
 run_test "POST /orders/:id/deliver (negative) -> 400" \
-  "req_auth POST /orders/-1/deliver '$DRONE1_TOKEN' '' 400"
+  "req_auth POST /orders/-1/deliver $DRONE1_TOKEN '' 400"
 
 run_test "POST /orders/:id/deliver (non-existent) -> 404" \
-  "req_auth POST /orders/99999/deliver '$DRONE1_TOKEN' '' 404"
+  "req_auth POST /orders/99999/deliver $DRONE1_TOKEN '' 404"
 
 # =============================================================================
 # ASSIGNMENT VALIDATION
@@ -58,7 +56,7 @@ run_test "POST /orders/:id/deliver (non-existent) -> 404" \
 test_section "Deliver Order - Assignment Validation"
 
 run_test "POST /orders/:id/deliver (not assigned to drone) -> 404" \
-  "req_auth POST /orders/$ORDER_ID/deliver '$DRONE2_TOKEN' '' 404"
+  "req_auth POST /orders/$ORDER_ID/deliver $DRONE2_TOKEN '' 404"
 
 # =============================================================================
 # VALID DELIVERY
@@ -66,12 +64,14 @@ run_test "POST /orders/:id/deliver (not assigned to drone) -> 404" \
 test_section "Deliver Order - Valid Requests"
 
 run_test "POST /orders/:id/deliver (picked_up order) -> 200" \
-  "req_auth POST /orders/$ORDER_ID/deliver '$DRONE1_TOKEN' '' 200"
+  "req_auth POST /orders/$ORDER_ID/deliver $DRONE1_TOKEN '' 200"
 
 run_test "delivery sets status delivered" "verify_json_field '.status' 'delivered'"
 
 run_test "POST /orders/:id/deliver (already delivered) -> 409" \
-  "req_auth POST /orders/$ORDER_ID/deliver '$DRONE1_TOKEN' '' 409"
+  "req_auth POST /orders/$ORDER_ID/deliver $DRONE1_TOKEN '' 409"
+
+# Cleanup: ORDER_ID is delivered, drone is now idle
 
 # =============================================================================
 # STATUS TRANSITION TESTS
@@ -79,35 +79,35 @@ run_test "POST /orders/:id/deliver (already delivered) -> 409" \
 test_section "Deliver Order - Invalid Status Transitions"
 
 # Deliver pending order
-reset_drones
 ORDER2_ID=$(create_order "$ENDUSER_TOKEN" 32.0 36.0 32.1 36.1)
 
 run_test "POST /orders/:id/deliver (pending order) -> 404" \
-  "req_auth POST /orders/$ORDER2_ID/deliver '$DRONE1_TOKEN' '' 404"
+  "req_auth POST /orders/$ORDER2_ID/deliver $DRONE1_TOKEN '' 404"
 
 # Deliver reserved order (not picked up yet)
 req_auth POST /orders/$ORDER2_ID/reserve "$DRONE1_TOKEN" '' 200 >/dev/null
 
 run_test "POST /orders/:id/deliver (reserved order) -> 409" \
-  "req_auth POST /orders/$ORDER2_ID/deliver '$DRONE1_TOKEN' '' 409"
+  "req_auth POST /orders/$ORDER2_ID/deliver $DRONE1_TOKEN '' 409"
+
+# Cleanup: ORDER2_ID is reserved, fail it to free drone
+req_auth POST /orders/$ORDER2_ID/fail "$DRONE1_TOKEN" '' 200 >/dev/null
 
 # Deliver canceled order
-req_auth POST /orders/$ORDER2_ID/fail "$DRONE1_TOKEN" '' 200 >/dev/null
 ORDER3_ID=$(create_order "$ENDUSER_TOKEN" 33.0 37.0 33.1 37.1)
 req_auth POST /orders/$ORDER3_ID/cancel "$ENDUSER_TOKEN" '' 200 >/dev/null
 
 run_test "POST /orders/:id/deliver (canceled order) -> 404" \
-  "req_auth POST /orders/$ORDER3_ID/deliver '$DRONE1_TOKEN' '' 404"
+  "req_auth POST /orders/$ORDER3_ID/deliver $DRONE1_TOKEN '' 404"
 
 # Deliver failed order
-reset_drones
 ORDER4_ID=$(create_order "$ENDUSER_TOKEN" 34.0 38.0 34.1 38.1)
 req_auth POST /orders/$ORDER4_ID/reserve "$DRONE1_TOKEN" '' 200 >/dev/null
 req_auth POST /orders/$ORDER4_ID/pickup "$DRONE1_TOKEN" '' 200 >/dev/null
 req_auth POST /orders/$ORDER4_ID/fail "$DRONE1_TOKEN" '' 200 >/dev/null
 
 run_test "POST /orders/:id/deliver (failed order) -> 409" \
-  "req_auth POST /orders/$ORDER4_ID/deliver '$DRONE1_TOKEN' '' 409"
+  "req_auth POST /orders/$ORDER4_ID/deliver $DRONE1_TOKEN '' 409"
 
 # TODO: Test deliver with wrong drone status (idle, reserved, broken)
 # TODO: Test database consistency (drone freed, order status updated)

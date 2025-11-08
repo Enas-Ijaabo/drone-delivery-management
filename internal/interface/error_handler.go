@@ -2,6 +2,7 @@ package iface
 
 import (
 	"errors"
+	"log"
 	"net/http"
 
 	"github.com/Enas-Ijaabo/drone-delivery-management/internal/model"
@@ -14,6 +15,10 @@ func ErrorHandlerMiddleware() gin.HandlerFunc {
 		c.Next()
 
 		if len(c.Errors) > 0 {
+			for _, e := range c.Errors {
+				log.Printf("error: method=%s path=%s err=%v", c.Request.Method, c.Request.URL.Path, e.Err)
+			}
+
 			err := c.Errors.Last().Err
 			var repoErr *repo.RepoError
 			if errors.As(err, &repoErr) {

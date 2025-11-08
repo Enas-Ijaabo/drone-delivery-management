@@ -140,77 +140,25 @@ get_token() {
   local username="$1"
   local password="$2"
   local resp=""
-  resp=$(req POST /auth/token "{\"name\":\"$username\",\"password\":\"$password\"}" 200 2>/dev/null) || true
+  resp=$(req POST /auth/token "{\"name\":\"$username\",\"password\":\"$password\"}" 200 2>/dev/null)
   if [[ -z "${resp:-}" ]] || ! echo "$resp" | jq -e '.access_token' >/dev/null 2>&1; then
     echo "ERROR: Failed to get token for user: $username" >&2
-    echo ""
-    return 0
+    return 1
   fi
   echo "$resp" | jq -r '.access_token'
   return 0
 }
 
 create_order() {
-  local token="$1"
-  local pickup_lat="$2"
-  local pickup_lng="$3"
-  local dropoff_lat="$4"
-  local dropoff_lng="$5"
-  
+  local token="$1" pickup_lat="$2" pickup_lng="$3" dropoff_lat="$4" dropoff_lng="$5"
   local resp=""
-  resp=$(req_auth POST /orders "$token" \
-    "{\"pickup_lat\":$pickup_lat,\"pickup_lng\":$pickup_lng,\"dropoff_lat\":$dropoff_lat,\"dropoff_lng\":$dropoff_lng}" 201 2>/dev/null) || true
+  resp=$(req_auth POST /orders "$token" "{\"pickup_lat\":$pickup_lat,\"pickup_lng\":$pickup_lng,\"dropoff_lat\":$dropoff_lat,\"dropoff_lng\":$dropoff_lng}" 201 2>/dev/null)
   if [[ -z "${resp:-}" ]] || ! echo "$resp" | jq -e '.order_id' >/dev/null 2>&1; then
     echo "ERROR: Failed to create order" >&2
-    echo "" 
-    return 0
+    return 1
   fi
   echo "$resp" | jq -r '.order_id'
   return 0
-}
-
-# =============================================================================
-# DATABASE HELPERS
-# =============================================================================
-
-get_db_value() {
-  local query="$1"
-  docker-compose exec -T db mysql -u root -pexample drone -Nse "$query" 2>/dev/null
-}
-
-verify_db_value() {
-  local query="$1"
-  local expected="$2"
-  local actual
-  actual=$(get_db_value "$query")
-  
-  if [[ "$actual" == "$expected" ]]; then
-    return 0
-  else
-    echo "Expected: $expected, Got: $actual"
-    return 1
-  fi
-}
-
-verify_db_timestamp_updated() {
-  local table="$1"
-  local id="$2"
-  local id_col="${3:-id}"
-  
-  local query="SELECT updated_at FROM $table WHERE $id_col=$id"
-  local timestamp
-  timestamp=$(get_db_value "$query")
-  
-  if [[ -n "$timestamp" ]]; then
-    return 0
-  else
-    return 1
-  fi
-}
-
-reset_drones() {
-  docker-compose exec -T db mysql -u root -pexample drone \
-    -e "UPDATE drone_status SET status='idle', current_order_id=NULL WHERE drone_id IN (4, 5);" 2>/dev/null || true
 }
 
 # =============================================================================
@@ -434,19 +382,20 @@ print_summary() {
 # INITIALIZATION
 # =============================================================================
 
-# This function should be called at the start of each test file
+# This function should be called at the start of each test file if needed
 init_tests() {
   echo "Initializing test environment..."
-  
-  # Reset drones to idle state
-  reset_drones
-  
+
   # Setup all test user tokens
   setup_test_users
-  
+
   # Create a pending order for general use
   create_order_as_enduser
-  
+
   echo "Test environment ready!"
   echo ""
+}
+
+run_step() { # alias counts setup actions as tests for visibility
+  run_test "$@"
 }
