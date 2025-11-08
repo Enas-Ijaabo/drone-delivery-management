@@ -5,11 +5,14 @@ set -euo pipefail
 # Source common test utilities
 source "$(dirname "$0")/test_common.sh"
 
-# Disable exit-on-error; run_test handles failures and summary prints
+# Disable strict modes after sourcing; run_test handles result capturing
 set +e
+set +u
+set +o pipefail
 
 TEST_COUNT=0
 PASS_COUNT=0
+FAIL_COUNT=0
 
 # =============================================================================
 # SUCCESSFUL AUTHENTICATION TESTS
@@ -19,20 +22,20 @@ test_section "Authentication - Success Cases"
 run_test "POST /auth/token (admin) -> 200" \
   "req POST /auth/token '{\"name\":\"admin\",\"password\":\"password\"}' 200"
 
-verify_json_has_field ".access_token" "$LAST_RESPONSE"
-verify_json_field ".token_type" "bearer" "$LAST_RESPONSE"
-verify_json_field ".user.name" "admin" "$LAST_RESPONSE"
-verify_json_field ".user.type" "admin" "$LAST_RESPONSE"
+run_test "Auth(admin) response has access_token" "verify_json_has_field '.access_token'"
+run_test "Auth(admin) token_type bearer" "verify_json_field '.token_type' 'bearer'"
+run_test "Auth(admin) user.name" "verify_json_field '.user.name' 'admin'"
+run_test "Auth(admin) user.type admin" "verify_json_field '.user.type' 'admin'"
 
 run_test "POST /auth/token (enduser) -> 200" \
   "req POST /auth/token '{\"name\":\"enduser1\",\"password\":\"password\"}' 200"
 
-verify_json_field ".user.type" "enduser" "$LAST_RESPONSE"
+run_test "Auth(enduser) user.type enduser" "verify_json_field '.user.type' 'enduser'"
 
 run_test "POST /auth/token (drone) -> 200" \
   "req POST /auth/token '{\"name\":\"drone1\",\"password\":\"password\"}' 200"
 
-verify_json_field ".user.type" "drone" "$LAST_RESPONSE"
+run_test "Auth(drone) user.type drone" "verify_json_field '.user.type' 'drone'"
 
 # =============================================================================
 # FAILED AUTHENTICATION TESTS

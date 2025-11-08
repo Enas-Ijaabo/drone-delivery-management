@@ -4,6 +4,12 @@ set -euo pipefail
 
 source "$(dirname "$0")/test_common.sh"
 set +e
+set +u
+set +o pipefail
+
+TEST_COUNT=0
+PASS_COUNT=0
+FAIL_COUNT=0
 
 # Get tokens
 ENDUSER_TOKEN=$(get_token "enduser1" "password")
@@ -47,14 +53,14 @@ run_test "GET /orders/:id (non-existent) -> 404" \
 test_section "GET Order - Without Drone"
 
 run_test "GET /orders/:id (pending order) -> 200" \
-  "req_auth GET /orders/$ORDER_ID '$ENDUSER_TOKEN' '' 200 && \
-   verify_json_field '.status' 'pending' && \
-   verify_json_has_field '.order_id' && \
-   verify_json_has_field '.pickup' && \
-   verify_json_has_field '.dropoff' && \
-   verify_json_field_absent '.assigned_drone_id' && \
-   verify_json_field_absent '.drone_location' && \
-   verify_json_field_absent '.eta_minutes'"
+  "req_auth GET /orders/$ORDER_ID '$ENDUSER_TOKEN' '' 200"
+run_test "Order pending status field" "verify_json_field '.status' 'pending'"
+run_test "Order has order_id" "verify_json_has_field '.order_id'"
+run_test "Order has pickup field" "verify_json_has_field '.pickup'"
+run_test "Order has dropoff field" "verify_json_has_field '.dropoff'"
+run_test "Order absent assigned_drone_id" "verify_json_field_absent '.assigned_drone_id'"
+run_test "Order absent drone_location" "verify_json_field_absent '.drone_location'"
+run_test "Order absent eta_minutes" "verify_json_field_absent '.eta_minutes'"
 
 # =============================================================================
 # SUCCESSFUL GET - WITH DRONE
@@ -69,26 +75,26 @@ ORDER3_ID=$(create_order "$ENDUSER_TOKEN" 31.9 35.9 32.0 36.0)
 req_auth POST /orders/$ORDER3_ID/reserve "$DRONE_TOKEN" '' 200 >/dev/null
 
 run_test "GET /orders/:id (reserved order with drone) -> 200" \
-  "req_auth GET /orders/$ORDER3_ID '$ENDUSER_TOKEN' '' 200 && \
-   verify_json_field '.status' 'reserved' && \
-   verify_json_has_field '.assigned_drone_id' && \
-   verify_json_has_field '.drone_location' && \
-   verify_json_has_field '.eta_minutes'"
+  "req_auth GET /orders/$ORDER3_ID '$ENDUSER_TOKEN' '' 200"
+run_test "Reserved has status" "verify_json_field '.status' 'reserved'"
+run_test "Reserved has assigned_drone_id" "verify_json_has_field '.assigned_drone_id'"
+run_test "Reserved has drone_location" "verify_json_has_field '.drone_location'"
+run_test "Reserved has eta_minutes" "verify_json_has_field '.eta_minutes'"
 
 # Pickup order
 req_auth POST /orders/$ORDER3_ID/pickup "$DRONE_TOKEN" '' 200 >/dev/null
 
 run_test "GET /orders/:id (picked_up order with drone) -> 200" \
-  "req_auth GET /orders/$ORDER3_ID '$ENDUSER_TOKEN' '' 200 && \
-   verify_json_field '.status' 'picked_up' && \
-   verify_json_has_field '.drone_location' && \
-   verify_json_has_field '.eta_minutes'"
+  "req_auth GET /orders/$ORDER3_ID '$ENDUSER_TOKEN' '' 200"
+run_test "Picked_up has status" "verify_json_field '.status' 'picked_up'"
+run_test "Picked_up has drone_location" "verify_json_has_field '.drone_location'"
+run_test "Picked_up has eta_minutes" "verify_json_has_field '.eta_minutes'"
 
 # Deliver order
 req_auth POST /orders/$ORDER3_ID/deliver "$DRONE_TOKEN" '' 200 >/dev/null
 
 run_test "GET /orders/:id (delivered order) -> 200" \
-  "req_auth GET /orders/$ORDER3_ID '$ENDUSER_TOKEN' '' 200 && \
-   verify_json_field '.status' 'delivered'"
+  "req_auth GET /orders/$ORDER3_ID '$ENDUSER_TOKEN' '' 200"
+run_test "Delivered status" "verify_json_field '.status' 'delivered'"
 
 print_summary "GET /orders/:id"

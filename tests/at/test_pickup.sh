@@ -4,6 +4,12 @@ set -euo pipefail
 
 source "$(dirname "$0")/test_common.sh"
 set +e
+set +u
+set +o pipefail
+
+TEST_COUNT=0
+PASS_COUNT=0
+FAIL_COUNT=0
 
 reset_drones
 
@@ -66,7 +72,7 @@ test_section "Pickup Order - Valid Requests"
 run_test "POST /orders/:id/pickup (reserved order) -> 200" \
   "req_auth POST /orders/$ORDER_ID/pickup '$DRONE1_TOKEN' '' 200"
 
-verify_json_field ".status" "picked_up" "$LAST_RESPONSE"
+run_test "pickup sets status picked_up" "verify_json_field '.status' 'picked_up'"
 
 run_test "POST /orders/:id/pickup (already picked up) -> 409" \
   "req_auth POST /orders/$ORDER_ID/pickup '$DRONE1_TOKEN' '' 409"

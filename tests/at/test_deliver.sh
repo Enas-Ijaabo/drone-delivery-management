@@ -3,6 +3,8 @@
 set -euo pipefail
 source "$(dirname "$0")/test_common.sh"
 set +e
+set +u
+set +o pipefail
 
 reset_drones
 
@@ -66,7 +68,7 @@ test_section "Deliver Order - Valid Requests"
 run_test "POST /orders/:id/deliver (picked_up order) -> 200" \
   "req_auth POST /orders/$ORDER_ID/deliver '$DRONE1_TOKEN' '' 200"
 
-verify_json_field ".status" "delivered" "$LAST_RESPONSE"
+run_test "delivery sets status delivered" "verify_json_field '.status' 'delivered'"
 
 run_test "POST /orders/:id/deliver (already delivered) -> 409" \
   "req_auth POST /orders/$ORDER_ID/deliver '$DRONE1_TOKEN' '' 409"

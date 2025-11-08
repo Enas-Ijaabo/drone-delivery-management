@@ -4,6 +4,8 @@ set -euo pipefail
 
 source "$(dirname "$0")/test_common.sh"
 set +e
+set +u
+set +o pipefail
 
 reset_drones
 
@@ -67,7 +69,7 @@ test_section "Fail Order - Valid from picked_up"
 run_test "POST /orders/:id/fail (picked_up order) -> 200" \
   "req_auth POST /orders/$ORDER_ID/fail '$DRONE1_TOKEN' '' 200"
 
-verify_json_field ".status" "failed" "$LAST_RESPONSE"
+run_test "fail sets status failed (picked_up)" "verify_json_field '.status' 'failed'"
 
 run_test "POST /orders/:id/fail (already failed) -> 409" \
   "req_auth POST /orders/$ORDER_ID/fail '$DRONE1_TOKEN' '' 409"
@@ -84,7 +86,7 @@ req_auth POST /orders/$ORDER2_ID/reserve "$DRONE1_TOKEN" '' 200 >/dev/null
 run_test "POST /orders/:id/fail (reserved order) -> 200" \
   "req_auth POST /orders/$ORDER2_ID/fail '$DRONE1_TOKEN' '' 200"
 
-verify_json_field ".status" "failed" "$LAST_RESPONSE"
+run_test "fail sets status failed (reserved)" "verify_json_field '.status' 'failed'"
 
 # =============================================================================
 # STATUS TRANSITION TESTS

@@ -4,6 +4,8 @@ set -euo pipefail
 
 source "$(dirname "$0")/test_common.sh"
 set +e
+set +u
+set +o pipefail
 
 reset_drones
 ADMIN_TOKEN=$(get_token "admin" "password")
@@ -26,7 +28,7 @@ run_test "non-existent -> 404" "req_auth POST /orders/999999/reserve '$DRONE1_TO
 
 test_section "Reserve - Valid"
 run_test "valid pending order -> 200" "req_auth POST /orders/$ORDER/reserve '$DRONE1_TOKEN' '' 200"
-verify_json_field ".status" "reserved" "$LAST_RESPONSE"
+run_test "reservation sets status reserved" "verify_json_field '.status' 'reserved'"
 
 test_section "Reserve - Status Transitions"
 run_test "already reserved -> 409" "req_auth POST /orders/$ORDER/reserve '$DRONE1_TOKEN' '' 409"

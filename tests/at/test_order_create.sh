@@ -4,6 +4,12 @@ set -euo pipefail
 
 source "$(dirname "$0")/test_common.sh"
 set +e
+set +u
+set +o pipefail
+
+TEST_COUNT=0
+PASS_COUNT=0
+FAIL_COUNT=0
 
 # Get tokens
 ADMIN_TOKEN=$(get_token "admin" "password")
@@ -31,8 +37,8 @@ test_section "Order Creation - Valid Requests"
 run_test "POST /orders (standard coordinates) -> 201" \
   "req_auth POST /orders '$ENDUSER_TOKEN' '{\"pickup_lat\":31.9454,\"pickup_lng\":35.9284,\"dropoff_lat\":31.9632,\"dropoff_lng\":35.9106}' 201"
 
-verify_json_field ".status" "pending" "$LAST_RESPONSE"
-verify_json_has_field ".order_id" "$LAST_RESPONSE"
+run_test "Order create standard has status pending" "verify_json_field '.status' 'pending'"
+run_test "Order create standard has order_id field" "verify_json_has_field '.order_id'"
 
 run_test "POST /orders (decimal coordinates) -> 201" \
   "req_auth POST /orders '$ENDUSER_TOKEN' '{\"pickup_lat\":31.945678,\"pickup_lng\":35.928456,\"dropoff_lat\":31.963234,\"dropoff_lng\":35.910678}' 201"

@@ -4,6 +4,12 @@ set -euo pipefail
 
 source "$(dirname "$0")/test_common.sh"
 set +e
+set +u
+set +o pipefail
+
+TEST_COUNT=0
+PASS_COUNT=0
+FAIL_COUNT=0
 
 # Get tokens
 ADMIN_TOKEN=$(get_token "admin" "password")
@@ -35,8 +41,8 @@ ORDER_ID=$(create_order "$ENDUSER_TOKEN" 31.9 35.9 32.0 36.0)
 run_test "POST /orders/:id/cancel (pending order) -> 200" \
   "req_auth POST /orders/$ORDER_ID/cancel '$ENDUSER_TOKEN' '' 200"
 
-verify_json_field ".status" "canceled" "$LAST_RESPONSE"
-verify_json_has_field ".canceled_at" "$LAST_RESPONSE"
+run_test "cancel sets status=canceled" "verify_json_field '.status' 'canceled'"
+run_test "cancel has canceled_at" "verify_json_has_field '.canceled_at'"
 
 run_test "POST /orders/:id/cancel (already canceled) -> 409" \
   "req_auth POST /orders/$ORDER_ID/cancel '$ENDUSER_TOKEN' '' 409"

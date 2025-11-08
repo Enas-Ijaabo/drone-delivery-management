@@ -5,11 +5,14 @@ set -euo pipefail
 # Source common test utilities
 source "$(dirname "$0")/test_common.sh"
 
-# Disable exit-on-error; run_test handles failures and summary prints
+# Disable exit-on-error and unset-var exit and pipefail; run_test handles failures and summary prints
 set +e
+set +u
+set +o pipefail
 
 TEST_COUNT=0
 PASS_COUNT=0
+FAIL_COUNT=0
 
 # =============================================================================
 # HEALTH CHECK TESTS
