@@ -13,6 +13,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y jq
+          python3 -m pip install --user websockets
 
       - name: Write .env for compose
         run: |
