@@ -76,14 +76,15 @@ func ErrOrderTransitionNotAllowed(from, to string) *DomainError {
 }
 
 func ErrDroneTransitionNotAllowed(from, to string) *DomainError {
-	return NewDomainErrorWithDetails(
-		ErrCodeDroneStatusTransitionNotAllowed,
-		fmt.Sprintf("transition from %s to %s is not allowed", from, to),
-		map[string]interface{}{
+	return &DomainError{
+		Code:    ErrCodeDroneStatusTransitionNotAllowed,
+		Message: fmt.Sprintf("transition from %s to %s is not allowed", from, to),
+		Details: map[string]interface{}{
 			"from": from,
 			"to":   to,
 		},
-	)
+		StatusCode: 409,
+	}
 }
 
 func ErrOrderNotOwned() *DomainError {

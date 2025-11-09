@@ -12,6 +12,7 @@ import (
 
 type DroneOpsUsecase interface {
 	ReportBroken(ctx context.Context, actorID, droneID int64, actorRole model.Role, location model.DroneHeartbeat) (*model.Drone, *model.Order, error)
+	ReportFixed(ctx context.Context, actorID, droneID int64, actorRole model.Role, location model.DroneHeartbeat) (*model.Drone, error)
 }
 
 type DroneHandler struct {
@@ -22,7 +23,7 @@ func NewDroneHandler(ops DroneOpsUsecase) *DroneHandler {
 	return &DroneHandler{ops: ops}
 }
 
-type droneBrokenRequest struct {
+type droneLocationRequest struct {
 	Lat *float64 `json:"lat,omitempty"`
 	Lng *float64 `json:"lng,omitempty"`
 }
@@ -58,7 +59,7 @@ func (h *DroneHandler) MarkBroken(c *gin.Context) {
 		return
 	}
 
-	var req droneBrokenRequest
+	var req droneLocationRequest
 	if err := c.ShouldBindJSON(&req); err != nil || req.Lat == nil || req.Lng == nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request", "message": "lat and lng are required"})
 		return
@@ -75,10 +76,47 @@ func (h *DroneHandler) MarkBroken(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, toDroneBrokenResponse(drone, order))
+	c.JSON(http.StatusOK, toDroneStatusResponse(drone, order))
 }
 
-func toDroneBrokenResponse(drone *model.Drone, order *model.Order) droneBrokenResponse {
+func (h *DroneHandler) MarkFixed(c *gin.Context) {
+	droneIDParam := c.Param("id")
+	droneID, err := strconv.ParseInt(droneIDParam, 10, 64)
+	if err != nil || droneID <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_drone_id", "message": "invalid drone id"})
+		return
+	}
+
+	subjectID, err := extractSubjectID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized", "message": err.Error()})
+		return
+	}
+
+	subjectRole, err := extractSubjectRole(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized", "message": err.Error()})
+		return
+	}
+
+	var req droneLocationRequest
+	if err := c.ShouldBindJSON(&req); err != nil || req.Lat == nil || req.Lng == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request", "message": "lat and lng are required"})
+		return
+	}
+
+	location := model.DroneHeartbeat{Lat: *req.Lat, Lng: *req.Lng}
+
+	drone, err := h.ops.ReportFixed(c.Request.Context(), subjectID, droneID, model.Role(subjectRole), location)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, toDroneStatusResponse(drone, nil))
+}
+
+func toDroneStatusResponse(drone *model.Drone, order *model.Order) droneBrokenResponse {
 	resp := droneBrokenResponse{
 		DroneID:        drone.ID,
 		Status:         string(drone.Status),

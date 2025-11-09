@@ -55,6 +55,8 @@ type orderResponse struct {
 	AssignedDroneID *int64            `json:"assigned_drone_id,omitempty"`
 	DroneLocation   *locationResponse `json:"drone_location,omitempty"`
 	ETAMinutes      *model.ETA        `json:"eta_minutes,omitempty"`
+	HandoffLat      *float64          `json:"handoff_lat,omitempty"`
+	HandoffLng      *float64          `json:"handoff_lng,omitempty"`
 }
 
 func (h *OrderHandler) CreateOrder(c *gin.Context) {
@@ -292,6 +294,8 @@ func toOrderResponse(order model.Order) orderResponse {
 		UpdatedAt:       order.UpdatedAt,
 		CanceledAt:      order.CanceledAt,
 		AssignedDroneID: order.AssignedDroneID,
+		HandoffLat:      order.HandoffLat,
+		HandoffLng:      order.HandoffLng,
 	}
 }
 
@@ -311,6 +315,8 @@ func toOrderDetailsResponse(details model.OrderDetails) orderResponse {
 		UpdatedAt:       details.Order.UpdatedAt,
 		CanceledAt:      details.Order.CanceledAt,
 		AssignedDroneID: details.Order.AssignedDroneID,
+		HandoffLat:      details.Order.HandoffLat,
+		HandoffLng:      details.Order.HandoffLng,
 	}
 
 	if details.DroneLocation != nil {

@@ -145,3 +145,24 @@ func (d *Drone) ReportBroken(location DroneHeartbeat) error {
 
 	return nil
 }
+
+func (d *Drone) ReportFixed(location DroneHeartbeat) error {
+	if location.Lat < -90 || location.Lat > 90 {
+		return ErrInvalidLatitude(location.Lat)
+	}
+	if location.Lng < -180 || location.Lng > 180 {
+		return ErrInvalidLongitude(location.Lng)
+	}
+
+	if d.Status != DroneIdle {
+		if err := d.UpdateStatus(DroneIdle); err != nil {
+			return err
+		}
+	}
+
+	d.Lat = location.Lat
+	d.Lng = location.Lng
+	d.CurrentOrderID = nil
+
+	return nil
+}

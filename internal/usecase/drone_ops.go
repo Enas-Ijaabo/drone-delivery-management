@@ -80,3 +80,35 @@ func (uc *DroneOpsUsecase) ReportBroken(ctx context.Context, actorID, droneID in
 
 	return updatedDrone, updatedOrder, nil
 }
+
+func (uc *DroneOpsUsecase) ReportFixed(ctx context.Context, actorID, droneID int64, actorRole model.Role, location model.DroneHeartbeat) (*model.Drone, error) {
+	if actorRole.IsDrone() && actorID != droneID {
+		return nil, model.ErrDroneActionNotAllowed()
+	}
+
+	tx, err := uc.droneRepo.BeginTx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	drone, err := uc.droneRepo.GetByIDForUpdate(ctx, tx, droneID)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := drone.ReportFixed(location); err != nil {
+		return nil, err
+	}
+
+	updatedDrone, err := uc.droneRepo.UpdateTx(ctx, tx, drone)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return updatedDrone, nil
+}
