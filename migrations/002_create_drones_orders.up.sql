@@ -5,17 +5,19 @@ CREATE TABLE IF NOT EXISTS drone_status (
   current_order_id BIGINT NULL,
   lat DECIMAL(9,6) NOT NULL DEFAULT 0.0,
   lng DECIMAL(9,6) NOT NULL DEFAULT 0.0,
+  location POINT NOT NULL SRID 4326,
   last_heartbeat_at TIMESTAMP NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   KEY idx_drone_status_status (status),
   KEY idx_drone_status_current_order (current_order_id),
+  SPATIAL INDEX idx_drone_location (location),
   CONSTRAINT fk_drone_status_user FOREIGN KEY (drone_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Seed status rows for existing drones so they start as idle
-INSERT IGNORE INTO drone_status (drone_id, status, current_order_id, lat, lng)
-SELECT id, 'idle', NULL, 0.0, 0.0
+INSERT IGNORE INTO drone_status (drone_id, status, current_order_id, lat, lng, location)
+SELECT id, 'idle', NULL, 0.0, 0.0, ST_SRID(POINT(0.0, 0.0), 4326)
 FROM users
 WHERE type = 'drone';
 
@@ -41,4 +43,3 @@ CREATE TABLE IF NOT EXISTS orders (
   CONSTRAINT fk_orders_enduser FOREIGN KEY (enduser_id) REFERENCES users(id) ON DELETE CASCADE,
   CONSTRAINT fk_orders_assigned_drone FOREIGN KEY (assigned_drone_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-

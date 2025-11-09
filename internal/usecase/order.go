@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"log"
+	"time"
 
 	"github.com/Enas-Ijaabo/drone-delivery-management/internal/model"
 )
@@ -21,24 +22,42 @@ type DroneRepo interface {
 	GetByIDForUpdate(ctx context.Context, tx *sql.Tx, id int64) (*model.Drone, error)
 	UpdateTx(ctx context.Context, tx *sql.Tx, drone *model.Drone) (*model.Drone, error)
 	BeginTx(ctx context.Context) (*sql.Tx, error)
+	FindNearestIdle(ctx context.Context, lat, lng float64) (*model.Drone, error)
+}
+
+type AssignmentNotifier interface {
+	NotifyAssignment(ctx context.Context, notice model.AssignmentNotice) error
 }
 
 type OrderUsecase struct {
-	orderRepo OrderRepo
-	droneRepo DroneRepo
+	orderRepo  OrderRepo
+	droneRepo  DroneRepo
+	notifier   AssignmentNotifier
+	assignTTL  time.Duration
+	workerPool chan struct{}
 }
 
-func NewOrderUsecase(orderRepo OrderRepo, droneRepo DroneRepo) *OrderUsecase {
+func NewOrderUsecase(orderRepo OrderRepo, droneRepo DroneRepo, notifier AssignmentNotifier) *OrderUsecase {
 	return &OrderUsecase{
-		orderRepo: orderRepo,
-		droneRepo: droneRepo,
+		orderRepo:  orderRepo,
+		droneRepo:  droneRepo,
+		notifier:   notifier,
+		assignTTL:  5 * time.Second,
+		workerPool: make(chan struct{}, 4),
 	}
 }
 
 func (uc *OrderUsecase) CreateOrder(ctx context.Context, req model.CreateOrderRequest) (*model.Order, error) {
 	order := model.NewOrder(req)
 
-	return uc.orderRepo.Insert(ctx, order)
+	created, err := uc.orderRepo.Insert(ctx, order)
+	if err != nil {
+		return nil, err
+	}
+
+	uc.triggerAssignment(*created)
+
+	return created, nil
 }
 
 func (uc *OrderUsecase) CancelOrder(ctx context.Context, userID, orderID int64) (*model.Order, error) {
@@ -70,6 +89,8 @@ func (uc *OrderUsecase) CancelOrder(ctx context.Context, userID, orderID int64) 
 		return nil, err
 	}
 
+	uc.triggerAssignmentIfPending(updatedOrder)
+
 	return updatedOrder, nil
 }
 
@@ -94,6 +115,20 @@ func (uc *OrderUsecase) GetOrder(ctx context.Context, userID, orderID int64) (*m
 
 	details := model.NewOrderDetails(*order, drone)
 	return &details, nil
+}
+
+func (uc *OrderUsecase) AssignOrder(ctx context.Context, order model.Order) error {
+	if uc.notifier == nil {
+		return nil
+	}
+
+	drone, err := uc.droneRepo.FindNearestIdle(ctx, order.PickupLat, order.PickupLng)
+	if err != nil {
+		return err
+	}
+
+	notice := model.NewAssignmentNotice(order, *drone)
+	return uc.notifier.NotifyAssignment(ctx, notice)
 }
 
 func (uc *OrderUsecase) ReserveOrder(ctx context.Context, droneID, orderID int64) (*model.Order, error) {
@@ -136,6 +171,30 @@ func (uc *OrderUsecase) ReserveOrder(ctx context.Context, droneID, orderID int64
 	}
 
 	return updatedOrder, nil
+}
+
+func (uc *OrderUsecase) triggerAssignment(order model.Order) {
+	if uc.notifier == nil {
+		return
+	}
+
+	select {
+	case uc.workerPool <- struct{}{}:
+	default:
+		// pool full; skip assignment attempt to avoid unbounded goroutines
+		return
+	}
+
+	go func(o model.Order) {
+		defer func() { <-uc.workerPool }()
+
+		ctx, cancel := context.WithTimeout(context.Background(), uc.assignTTL)
+		defer cancel()
+
+		if err := uc.AssignOrder(ctx, o); err != nil {
+			log.Printf("assign order %d failed: %v", o.ID, err)
+		}
+	}(order)
 }
 
 func (uc *OrderUsecase) DeliverOrder(ctx context.Context, droneID, orderID int64) (*model.Order, error) {
@@ -273,5 +332,16 @@ func (uc *OrderUsecase) FailOrder(ctx context.Context, droneID, orderID int64) (
 		return nil, err
 	}
 
+	uc.triggerAssignmentIfPending(updatedOrder)
+
 	return updatedOrder, nil
+}
+
+func (uc *OrderUsecase) triggerAssignmentIfPending(order *model.Order) {
+	if order == nil {
+		return
+	}
+	if order.Status == model.OrderPending {
+		uc.triggerAssignment(*order)
+	}
 }

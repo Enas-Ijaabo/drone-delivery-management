@@ -26,9 +26,22 @@ const (
 		WHERE u.id = ? AND u.type = 'drone'
 		FOR UPDATE
 	`
+	findNearestIdleQuery = `
+		SELECT u.id, ds.status, ds.current_order_id,
+		       ds.lat, ds.lng,
+		       ds.last_heartbeat_at, u.created_at, u.updated_at
+		FROM drone_status ds
+		JOIN users u ON u.id = ds.drone_id
+		WHERE ds.status = 'idle'
+		ORDER BY ST_Distance_Sphere(
+			ds.location,
+			ST_SRID(POINT(?, ?), 4326)
+		), ds.drone_id
+		LIMIT 1
+	`
 	updateDroneQuery = `
 		UPDATE drone_status 
-		SET status = ?, current_order_id = ?, lat = ?, lng = ?, last_heartbeat_at = ?, updated_at = NOW()
+		SET status = ?, current_order_id = ?, lat = ?, lng = ?, location = ST_SRID(POINT(?, ?), 4326), last_heartbeat_at = ?, updated_at = NOW()
 		WHERE drone_id = ?
 	`
 )
@@ -108,6 +121,8 @@ func (r *DroneRepo) UpdateTx(ctx context.Context, tx *sql.Tx, drone *model.Drone
 		dbo.CurrentOrderID,
 		dbo.Lat,
 		dbo.Lng,
+		dbo.Lng,
+		dbo.Lat,
 		dbo.LastHeartbeat,
 		dbo.ID)
 	if err != nil {
@@ -115,6 +130,28 @@ func (r *DroneRepo) UpdateTx(ctx context.Context, tx *sql.Tx, drone *model.Drone
 	}
 
 	return r.GetByIDForUpdate(ctx, tx, drone.ID)
+}
+
+func (r *DroneRepo) FindNearestIdle(ctx context.Context, lat, lng float64) (*model.Drone, error) {
+	var dbo droneDBO
+	err := r.db.QueryRowContext(ctx, findNearestIdleQuery, lng, lat).Scan(
+		&dbo.ID,
+		&dbo.Status,
+		&dbo.CurrentOrderID,
+		&dbo.Lat,
+		&dbo.Lng,
+		&dbo.LastHeartbeat,
+		&dbo.CreatedAt,
+		&dbo.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrDroneNotFound()
+		}
+		return nil, err
+	}
+
+	return dbo.toModel(), nil
 }
 
 func (dbo *droneDBO) toModel() *model.Drone {

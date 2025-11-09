@@ -51,13 +51,14 @@ func main() {
 
 	// Initialize usecases
 	authUC := usecase.NewAuthUsecase(usersRepo, jwtSecret, jwtTTL, jwtIssuer, jwtAudience)
-	orderUC := usecase.NewOrderUsecase(orderRepo, droneRepo)
 	droneUC := usecase.NewDroneUsecase(droneRepo)
+	registry := iface.NewConnectionRegistry()
+	droneWSHandler := iface.NewDroneWSHandler(droneUC, registry)
+	orderUC := usecase.NewOrderUsecase(orderRepo, droneRepo, droneWSHandler)
 
 	// Initialize interfaces/handlers
 	authHandler := iface.NewAuthHandler(authUC)
 	orderHandler := iface.NewOrderHandler(orderUC)
-	droneWSHandler := iface.NewDroneWSHandler(droneUC)
 	// Auth middleware instance
 	authMW := iface.AuthMiddleware(jwtSecret, jwtIssuer, jwtAudience)
 
