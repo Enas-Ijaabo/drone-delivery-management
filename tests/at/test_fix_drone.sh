@@ -161,10 +161,10 @@ test_section "Fixed Drone Can Accept Orders"
 # Break drone2
 break_drone 5 "$DRONE2_TOKEN" 29.5 34.5
 
-# Verify broken drone cannot reserve orders (returns 400 - invalid state transition)
+# Verify broken drone cannot reserve orders (returns 409 - state transition conflict)
 BROKEN_ORDER=$(create_order "$ENDUSER_TOKEN" 29.0 34.0 29.1 34.1)
 run_test "Broken drone cannot reserve order" \
-  "req_auth POST /orders/$BROKEN_ORDER/reserve '$DRONE2_TOKEN' '' 400"
+  "req_auth POST /orders/$BROKEN_ORDER/reserve '$DRONE2_TOKEN' '' 409"
 
 # Fix the drone
 fix_drone 5 29.0 34.0
