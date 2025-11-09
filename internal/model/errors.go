@@ -60,6 +60,7 @@ const (
 	ErrCodeOrderNotAssignedToDrone         = "order_not_assigned_to_drone"
 	ErrCodeInvalidLatitude                 = "invalid_latitude"
 	ErrCodeInvalidLongitude                = "invalid_longitude"
+	ErrCodeDroneActionNotAllowed           = "drone_action_not_allowed"
 )
 
 func ErrOrderTransitionNotAllowed(from, to string) *DomainError {
@@ -118,5 +119,14 @@ func ErrInvalidLongitude(lng float64) *DomainError {
 		Message:    "longitude must be between -180 and 180",
 		Details:    map[string]interface{}{"lng": lng},
 		StatusCode: 400,
+	}
+}
+
+func ErrDroneActionNotAllowed() *DomainError {
+	return &DomainError{
+		Code:       ErrCodeDroneActionNotAllowed,
+		Message:    "drone cannot perform this action",
+		Details:    make(map[string]interface{}),
+		StatusCode: 403,
 	}
 }

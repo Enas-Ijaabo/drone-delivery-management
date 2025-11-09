@@ -162,3 +162,22 @@ func (o *Order) Pickup() error {
 func (o *Order) Fail() error {
 	return o.UpdateStatus(OrderFailed)
 }
+
+func (o *Order) HandoffOrder(handoffLat, handoffLng float64) bool {
+	switch o.Status {
+	case OrderPending, OrderReserved:
+		o.AssignedDroneID = nil
+		o.Status = OrderPending
+		o.HandoffLat = nil
+		o.HandoffLng = nil
+		return true
+	case OrderPickedUp, OrderHandoffPending:
+		o.AssignedDroneID = nil
+		o.HandoffLat = &handoffLat
+		o.HandoffLng = &handoffLng
+		o.Status = OrderHandoffPending
+		return true
+	default:
+		return false
+	}
+}

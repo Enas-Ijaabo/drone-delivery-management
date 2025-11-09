@@ -10,6 +10,10 @@ const (
 	RoleDrone   Role = "drone"
 )
 
+func (r Role) IsDrone() bool {
+	return r == RoleDrone
+}
+
 type User struct {
 	ID        int64
 	Name      string

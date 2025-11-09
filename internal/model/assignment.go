@@ -1,5 +1,12 @@
 package model
 
+type AssignmentDescription string
+
+const (
+	AssignmentNewOrder AssignmentDescription = "new_order"
+	AssignmentHandoff  AssignmentDescription = "handoff"
+)
+
 type AssignmentNotice struct {
 	OrderID     int64
 	DroneID     int64
@@ -9,10 +16,15 @@ type AssignmentNotice struct {
 	DropoffLng  float64
 	EnduserID   int64
 	OrderStatus OrderStatus
-	Description string
+	Description AssignmentDescription
 }
 
 func NewAssignmentNotice(order Order, drone Drone) AssignmentNotice {
+	description := AssignmentNewOrder
+	if order.Status == OrderHandoffPending {
+		description = AssignmentHandoff
+	}
+
 	return AssignmentNotice{
 		OrderID:     order.ID,
 		DroneID:     drone.ID,
@@ -22,6 +34,6 @@ func NewAssignmentNotice(order Order, drone Drone) AssignmentNotice {
 		DropoffLng:  order.DropoffLng,
 		EnduserID:   order.EnduserID,
 		OrderStatus: order.Status,
-		Description: "New delivery assignment",
+		Description: description,
 	}
 }

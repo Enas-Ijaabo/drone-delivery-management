@@ -261,6 +261,7 @@ func toAssignmentMessage(notice model.AssignmentNotice) assignmentMessage {
 		EnduserID:   notice.EnduserID,
 		OrderStatus: string(notice.OrderStatus),
 		CreatedAt:   time.Now().UTC(),
+		Description: string(notice.Description),
 	}
 }
 

@@ -55,15 +55,17 @@ func main() {
 	registry := iface.NewConnectionRegistry()
 	droneWSHandler := iface.NewDroneWSHandler(droneUC, registry)
 	orderUC := usecase.NewOrderUsecase(orderRepo, droneRepo, droneWSHandler)
+	droneOpsUC := usecase.NewDroneOpsUsecase(droneRepo, orderRepo, orderUC)
 
 	// Initialize interfaces/handlers
 	authHandler := iface.NewAuthHandler(authUC)
 	orderHandler := iface.NewOrderHandler(orderUC)
+	droneHandler := iface.NewDroneHandler(droneOpsUC)
 	// Auth middleware instance
 	authMW := iface.AuthMiddleware(jwtSecret, jwtIssuer, jwtAudience)
 
 	// Gin router
-	r := iface.NewRouter(authHandler, orderHandler, droneWSHandler, authMW)
+	r := iface.NewRouter(authHandler, orderHandler, droneHandler, droneWSHandler, authMW)
 
 	srv := &http.Server{
 		Addr:    ":8080",

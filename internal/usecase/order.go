@@ -341,7 +341,15 @@ func (uc *OrderUsecase) triggerAssignmentIfPending(order *model.Order) {
 	if order == nil {
 		return
 	}
-	if order.Status == model.OrderPending {
+	if needsAssignment(order.Status) {
 		uc.triggerAssignment(*order)
 	}
+}
+
+func needsAssignment(status model.OrderStatus) bool {
+	return status == model.OrderPending || status == model.OrderHandoffPending
+}
+
+func (uc *OrderUsecase) ScheduleAssignment(order model.Order) {
+	uc.triggerAssignment(order)
 }

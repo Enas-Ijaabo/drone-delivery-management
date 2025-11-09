@@ -99,6 +99,10 @@ func (d *Drone) FailDelivery() error {
 	return nil
 }
 
+func (d *Drone) IsBroken() bool {
+	return d.Status == DroneBroken
+}
+
 func (d *Drone) Validate() error {
 	if d.Lat < -90 || d.Lat > 90 {
 		return ErrInvalidLatitude(d.Lat)
@@ -117,6 +121,27 @@ func (d *Drone) ApplyHeartbeat(update DroneHeartbeat, now time.Time) error {
 	d.Lat = update.Lat
 	d.Lng = update.Lng
 	d.LastHeartbeat = &now
+
+	return nil
+}
+
+func (d *Drone) ReportBroken(location DroneHeartbeat) error {
+	if location.Lat < -90 || location.Lat > 90 {
+		return ErrInvalidLatitude(location.Lat)
+	}
+	if location.Lng < -180 || location.Lng > 180 {
+		return ErrInvalidLongitude(location.Lng)
+	}
+
+	if d.Status != DroneBroken {
+		if err := d.UpdateStatus(DroneBroken); err != nil {
+			return err
+		}
+	}
+
+	d.Lat = location.Lat
+	d.Lng = location.Lng
+	d.CurrentOrderID = nil
 
 	return nil
 }

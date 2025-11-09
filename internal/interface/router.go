@@ -4,7 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func NewRouter(authHandler *AuthHandler, orderHandler *OrderHandler, droneWSHandler *DroneWSHandler, authMW gin.HandlerFunc) *gin.Engine {
+func NewRouter(authHandler *AuthHandler, orderHandler *OrderHandler, droneHandler *DroneHandler, droneWSHandler *DroneWSHandler, authMW gin.HandlerFunc) *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery(), ErrorHandlerMiddleware())
 
@@ -37,6 +37,18 @@ func NewRouter(authHandler *AuthHandler, orderHandler *OrderHandler, droneWSHand
 	ws.Use(authMW, RequireRoles("drone"))
 	{
 		ws.GET("/heartbeat", droneWSHandler.HandleHeartbeat)
+	}
+
+	droneMgmt := r.Group("/drones")
+	droneMgmt.Use(authMW, RequireRoles("drone"))
+	{
+		droneMgmt.POST("/:id/broken", droneHandler.MarkBroken)
+	}
+
+	adminDrones := r.Group("/admin/drones")
+	adminDrones.Use(authMW, RequireRoles("admin"))
+	{
+		adminDrones.POST("/:id/broken", droneHandler.MarkBroken)
 	}
 
 	return r
