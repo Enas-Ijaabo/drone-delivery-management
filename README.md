@@ -1,7 +1,8 @@
 # Drone Delivery Management Backend
 
-
 Authenticated REST + WebSocket API that powers drone deliveries: endusers place/track orders, drones execute them, admins monitor/override. Built with DDD separation (model/usecase/interface/repo), JWT auth, MySQL, polished Swagger docs, and comprehensive tests.
+
+**Tech Stack:** Go 1.24, Gin, gorilla/websocket, MySQL 8 (with spatial), JWT (golang-jwt), Docker Compose, Swagger (swag)
 
 ---
 
@@ -68,8 +69,6 @@ This project follows **Domain-Driven Design (DDD)** principles with clear separa
 - **tests/at** - acceptance suites (bash + curl + websocket helpers)
 
 The domain layer (`internal/model`) contains business entities and rules, while infrastructure concerns (HTTP, database, WebSocket) are isolated in outer layers. This makes the codebase testable, maintainable, and easy to extend.
-
-Tech stack: Go 1.24, Gin, gorilla/websocket, MySQL 8 (with spatial), JWT (golang-jwt), Docker Compose. Swagger docs generated with `swag`.
 
 ---
 
