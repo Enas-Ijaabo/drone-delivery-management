@@ -42,6 +42,18 @@ func NewAuthHandler(uc AuthUsecase) *AuthHandler {
 	return &AuthHandler{uc: uc}
 }
 
+// AuthTokenHandler godoc
+// @Summary User login
+// @Description Authenticate a user and return an access token
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param credentials body loginRequest true "Login credentials"
+// @Success 200 {object} loginResponse "Login successful"
+// @Failure 400 {object} map[string]string "Invalid request"
+// @Failure 401 {object} map[string]string "Invalid credentials"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /auth/token [post]
 func (h *AuthHandler) AuthTokenHandler(c *gin.Context) {
 	var req loginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

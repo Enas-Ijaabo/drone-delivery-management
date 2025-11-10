@@ -81,6 +81,65 @@ func NewDroneWSHandler(uc DroneHeartbeatUsecase, registry *ConnectionRegistry) *
 	}
 }
 
+// HandleHeartbeat godoc
+// @Summary WebSocket heartbeat endpoint for drones
+// @Description Establishes a WebSocket connection for drones to send heartbeat updates and receive assignments
+// @Description The drone must authenticate with a Bearer token in the query parameter or header.
+// @Description
+// @Description **Message Types:**
+// @Description
+// @Description 1. **Heartbeat** (Drone → Server):
+// @Description ```json
+// @Description {
+// @Description   "type": "heartbeat",
+// @Description   "lat": 40.7128,
+// @Description   "lng": -74.0060
+// @Description }
+// @Description ```
+// @Description
+// @Description 2. **Heartbeat Response** (Server → Drone):
+// @Description ```json
+// @Description {
+// @Description   "type": "heartbeat",
+// @Description   "message": "heartbeat received",
+// @Description   "timestamp": "2025-11-10T12:00:00Z"
+// @Description }
+// @Description ```
+// @Description
+// @Description 3. **Assignment** (Server → Drone):
+// @Description ```json
+// @Description {
+// @Description   "type": "assignment",
+// @Description   "drone_id": 1,
+// @Description   "order_id": 123,
+// @Description   "pickup_lat": 40.7128,
+// @Description   "pickup_lng": -74.0060,
+// @Description   "dropoff_lat": 40.7580,
+// @Description   "dropoff_lng": -73.9855,
+// @Description   "enduser_id": 456,
+// @Description   "order_status": "reserved",
+// @Description   "created_at": "2025-11-10T12:00:00Z"
+// @Description }
+// @Description ```
+// @Description
+// @Description 4. **Assignment Acknowledgment** (Drone → Server):
+// @Description ```json
+// @Description {
+// @Description   "type": "assignment_ack",
+// @Description   "order_id": 123,
+// @Description   "status": "accepted"
+// @Description }
+// @Description ```
+// @Tags drone-websocket
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param Authorization query string false "Bearer token can also be passed as query parameter"
+// @Success 101 {string} string "Switching Protocols - WebSocket connection established"
+// @Failure 400 {object} map[string]string "Bad request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /drone/heartbeat [get]
 func (h *DroneWSHandler) HandleHeartbeat(c *gin.Context) {
 	conn, err := h.upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {

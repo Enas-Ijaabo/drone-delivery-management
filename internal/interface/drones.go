@@ -53,6 +53,21 @@ type droneListResponse struct {
 	Meta paginationMeta        `json:"meta"`
 }
 
+// MarkBroken godoc
+// @Summary Report drone as broken
+// @Description Report that a drone is broken (can be called by drone or admin)
+// @Tags drones
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Drone ID"
+// @Param location body droneLocationRequest true "Drone location"
+// @Success 200 {object} droneStatusResponse "Drone marked as broken"
+// @Failure 400 {object} map[string]string "Invalid request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 404 {object} map[string]string "Drone not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /drone/drones/{id}/broken [post]
 func (h *DroneHandler) MarkBroken(c *gin.Context) {
 	droneIDParam := c.Param("id")
 	droneID, err := strconv.ParseInt(droneIDParam, 10, 64)
@@ -93,6 +108,22 @@ func (h *DroneHandler) MarkBroken(c *gin.Context) {
 	c.JSON(http.StatusOK, toDroneStatusResponse(drone, order))
 }
 
+// MarkFixed godoc
+// @Summary Mark drone as fixed (Admin action)
+// @Description Admin marks a broken drone as fixed and ready for operation
+// @Tags admin
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Drone ID"
+// @Param location body droneLocationRequest true "Drone location"
+// @Success 200 {object} droneStatusResponse "Drone marked as fixed"
+// @Failure 400 {object} map[string]string "Invalid request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden - Admin only"
+// @Failure 404 {object} map[string]string "Drone not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /admin/drones/{id}/fixed [post]
 func (h *DroneHandler) MarkFixed(c *gin.Context) {
 	droneIDParam := c.Param("id")
 	droneID, err := strconv.ParseInt(droneIDParam, 10, 64)
@@ -130,6 +161,21 @@ func (h *DroneHandler) MarkFixed(c *gin.Context) {
 	c.JSON(http.StatusOK, toDroneStatusResponse(drone, nil))
 }
 
+// List godoc
+// @Summary List all drones (Admin action)
+// @Description Get a paginated list of all drones with their status
+// @Tags admin
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "Page number (default: 1)"
+// @Param page_size query int false "Page size (default: 10)"
+// @Success 200 {object} droneListResponse "List of drones"
+// @Failure 400 {object} map[string]string "Invalid request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden - Admin only"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /admin/drones [get]
 func (h *DroneHandler) List(c *gin.Context) {
 	page, pageSize, err := parsePaginationParams(c)
 	if err != nil {

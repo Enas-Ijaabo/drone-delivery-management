@@ -2,6 +2,8 @@ package iface
 
 import (
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func NewRouter(authHandler *AuthHandler, orderHandler *OrderHandler, droneHandler *DroneHandler, droneWSHandler *DroneWSHandler, authMW gin.HandlerFunc) *gin.Engine {
@@ -10,6 +12,9 @@ func NewRouter(authHandler *AuthHandler, orderHandler *OrderHandler, droneHandle
 
 	// Public health
 	r.GET("/health", HealthHandler)
+
+	// Swagger documentation
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Auth endpoints
 	r.POST("/auth/token", authHandler.AuthTokenHandler)

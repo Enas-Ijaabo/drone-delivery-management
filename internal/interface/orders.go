@@ -77,6 +77,19 @@ type orderListResponse struct {
 	Meta paginationMeta  `json:"meta"`
 }
 
+// CreateOrder godoc
+// @Summary Create a new delivery order
+// @Description Create a new delivery order with pickup and dropoff locations
+// @Tags orders
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param order body createOrderRequest true "Order details"
+// @Success 201 {object} orderResponse "Order created successfully"
+// @Failure 400 {object} map[string]string "Invalid request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /orders [post]
 func (h *OrderHandler) CreateOrder(c *gin.Context) {
 	var req createOrderRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -118,6 +131,21 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 	c.JSON(http.StatusCreated, toOrderResponse(*order))
 }
 
+// CancelOrder godoc
+// @Summary Cancel an order
+// @Description Cancel a pending delivery order
+// @Tags orders
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Order ID"
+// @Success 200 {object} orderResponse "Order canceled successfully"
+// @Failure 400 {object} map[string]string "Invalid request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 404 {object} map[string]string "Order not found"
+// @Failure 409 {object} map[string]string "Order cannot be canceled"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /orders/{id}/cancel [post]
 func (h *OrderHandler) CancelOrder(c *gin.Context) {
 	idStr := c.Param(paramOrderID)
 	orderID, err := strconv.ParseInt(idStr, 10, 64)
@@ -146,6 +174,20 @@ func (h *OrderHandler) CancelOrder(c *gin.Context) {
 	c.JSON(http.StatusOK, toOrderResponse(*order))
 }
 
+// GetOrder godoc
+// @Summary Get order details
+// @Description Get detailed information about a specific order
+// @Tags orders
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Order ID"
+// @Success 200 {object} orderResponse "Order details"
+// @Failure 400 {object} map[string]string "Invalid request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 404 {object} map[string]string "Order not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /orders/{id} [get]
 func (h *OrderHandler) GetOrder(c *gin.Context) {
 	idStr := c.Param(paramOrderID)
 	orderID, err := strconv.ParseInt(idStr, 10, 64)
@@ -174,6 +216,21 @@ func (h *OrderHandler) GetOrder(c *gin.Context) {
 	c.JSON(http.StatusOK, toOrderDetailsResponse(*orderDetails))
 }
 
+// ReserveOrder godoc
+// @Summary Reserve an order (Drone action)
+// @Description Drone reserves a pending order for delivery
+// @Tags drone-actions
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Order ID"
+// @Success 200 {object} orderResponse "Order reserved successfully"
+// @Failure 400 {object} map[string]string "Invalid request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 404 {object} map[string]string "Order not found"
+// @Failure 409 {object} map[string]string "Order cannot be reserved"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /drone/orders/{id}/reserve [post]
 func (h *OrderHandler) ReserveOrder(c *gin.Context) {
 	idStr := c.Param(paramOrderID)
 	orderID, err := strconv.ParseInt(idStr, 10, 64)
@@ -202,6 +259,21 @@ func (h *OrderHandler) ReserveOrder(c *gin.Context) {
 	c.JSON(http.StatusOK, toOrderResponse(*order))
 }
 
+// PickupOrder godoc
+// @Summary Pickup an order (Drone action)
+// @Description Drone picks up an order from the pickup location
+// @Tags drone-actions
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Order ID"
+// @Success 200 {object} orderResponse "Order picked up successfully"
+// @Failure 400 {object} map[string]string "Invalid request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 404 {object} map[string]string "Order not found"
+// @Failure 409 {object} map[string]string "Order cannot be picked up"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /drone/orders/{id}/pickup [post]
 func (h *OrderHandler) PickupOrder(c *gin.Context) {
 	idStr := c.Param(paramOrderID)
 	orderID, err := strconv.ParseInt(idStr, 10, 64)
@@ -230,6 +302,21 @@ func (h *OrderHandler) PickupOrder(c *gin.Context) {
 	c.JSON(http.StatusOK, toOrderResponse(*order))
 }
 
+// DeliverOrder godoc
+// @Summary Deliver an order (Drone action)
+// @Description Drone delivers an order to the dropoff location
+// @Tags drone-actions
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Order ID"
+// @Success 200 {object} orderResponse "Order delivered successfully"
+// @Failure 400 {object} map[string]string "Invalid request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 404 {object} map[string]string "Order not found"
+// @Failure 409 {object} map[string]string "Order cannot be delivered"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /drone/orders/{id}/deliver [post]
 func (h *OrderHandler) DeliverOrder(c *gin.Context) {
 	idStr := c.Param(paramOrderID)
 	orderID, err := strconv.ParseInt(idStr, 10, 64)
@@ -258,6 +345,21 @@ func (h *OrderHandler) DeliverOrder(c *gin.Context) {
 	c.JSON(http.StatusOK, toOrderResponse(*order))
 }
 
+// FailOrder godoc
+// @Summary Fail an order (Drone action)
+// @Description Drone reports that an order delivery has failed
+// @Tags drone-actions
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Order ID"
+// @Success 200 {object} orderResponse "Order marked as failed"
+// @Failure 400 {object} map[string]string "Invalid request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 404 {object} map[string]string "Order not found"
+// @Failure 409 {object} map[string]string "Order cannot be failed"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /drone/orders/{id}/fail [post]
 func (h *OrderHandler) FailOrder(c *gin.Context) {
 	idStr := c.Param(paramOrderID)
 	orderID, err := strconv.ParseInt(idStr, 10, 64)
@@ -286,6 +388,22 @@ func (h *OrderHandler) FailOrder(c *gin.Context) {
 	c.JSON(http.StatusOK, toOrderResponse(*order))
 }
 
+// AdminUpdateRoute godoc
+// @Summary Update order route (Admin action)
+// @Description Admin updates the pickup or dropoff location of an order
+// @Tags admin
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Order ID"
+// @Param route body updateRouteRequest true "Route update details"
+// @Success 200 {object} orderResponse "Route updated successfully"
+// @Failure 400 {object} map[string]string "Invalid request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 404 {object} map[string]string "Order not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /admin/orders/{id} [patch]
 func (h *OrderHandler) AdminUpdateRoute(c *gin.Context) {
 	orderID, err := parseOrderID(c)
 	if err != nil {
@@ -364,6 +482,24 @@ func parseOrderID(c *gin.Context) (int64, error) {
 	return orderID, nil
 }
 
+// AdminListOrders godoc
+// @Summary List all orders (Admin action)
+// @Description Get a paginated list of all orders with optional filters
+// @Tags admin
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "Page number (default: 1)"
+// @Param page_size query int false "Page size (default: 10)"
+// @Param status query string false "Filter by order status"
+// @Param enduser_id query int false "Filter by end user ID"
+// @Param assigned_drone_id query int false "Filter by assigned drone ID"
+// @Success 200 {object} orderListResponse "List of orders"
+// @Failure 400 {object} map[string]string "Invalid request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Failure 403 {object} map[string]string "Forbidden"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /admin/orders [get]
 func (h *OrderHandler) AdminListOrders(c *gin.Context) {
 	filters, err := parseOrderFilters(c)
 	if err != nil {

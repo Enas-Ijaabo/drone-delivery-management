@@ -1,3 +1,23 @@
+// @title Drone Delivery Management API
+// @version 1.0.0
+// @description REST + WebSocket APIs that power the Drone Delivery Management platform.
+// @description
+// @description * Authentication: Bearer JWT tokens acquired from `POST /auth/token`.
+// @description * Authorization: Role based (enduser, drone, admin) – documented per route.
+
+// @contact.name API Support
+// @contact.email
+// @license.name
+// @license.url
+// @host localhost:8080
+// @BasePath /
+// @schemes http
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
+
 package main
 
 import (
@@ -10,6 +30,7 @@ import (
 	"strings"
 	"time"
 
+	_ "github.com/Enas-Ijaabo/drone-delivery-management/docs" // Import generated docs
 	_ "github.com/go-sql-driver/mysql"
 )
 

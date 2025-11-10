@@ -18,6 +18,7 @@ FROM gcr.io/distroless/base-debian12
 WORKDIR /app
 COPY --from=builder /app/app /app/app
 COPY migrations /migrations
+COPY docs /app/docs
 
 EXPOSE 8080
 ENTRYPOINT ["/app/app"]
