@@ -121,7 +121,7 @@ The current implementation meets the assessment scope; if this became a producti
 - **Unit & Integration Testing**: Add Go unit tests for domain logic and integration tests with test containers
 - **Database Read Replicas**: Split connection pools for read/write operations to scale throughput
 - **Observability**: Structured logging with correlation IDs, Prometheus metrics, distributed tracing
-- **Operational**: Graceful shutdown for WebSockets, rate limiting, JWT refresh tokens, database migration tooling
+- **Operational**: Graceful shutdown for WebSockets, rate limiting, JWT refresh tokens, database migration tooling, secrets via GitHub Secrets/vault
 
 ---
 
