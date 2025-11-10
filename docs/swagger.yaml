@@ -427,7 +427,7 @@ paths:
       summary: User login
       tags:
       - auth
-  /drone/drones/{id}/broken:
+  /drones/{id}/broken:
     post:
       consumes:
       - application/json
@@ -480,305 +480,6 @@ paths:
       summary: Report drone as broken
       tags:
       - drones
-  /drone/heartbeat:
-    get:
-      consumes:
-      - application/json
-      description: |-
-        Establishes a WebSocket connection for drones to send heartbeat updates and receive assignments
-        The drone must authenticate with a Bearer token in the query parameter or header.
-
-        **Message Types:**
-
-        1. **Heartbeat** (Drone → Server):
-        ```json
-        {
-        "type": "heartbeat",
-        "lat": 40.7128,
-        "lng": -74.0060
-        }
-        ```
-
-        2. **Heartbeat Response** (Server → Drone):
-        ```json
-        {
-        "type": "heartbeat",
-        "message": "heartbeat received",
-        "timestamp": "2025-11-10T12:00:00Z"
-        }
-        ```
-
-        3. **Assignment** (Server → Drone):
-        ```json
-        {
-        "type": "assignment",
-        "drone_id": 1,
-        "order_id": 123,
-        "pickup_lat": 40.7128,
-        "pickup_lng": -74.0060,
-        "dropoff_lat": 40.7580,
-        "dropoff_lng": -73.9855,
-        "enduser_id": 456,
-        "order_status": "reserved",
-        "created_at": "2025-11-10T12:00:00Z"
-        }
-        ```
-
-        4. **Assignment Acknowledgment** (Drone → Server):
-        ```json
-        {
-        "type": "assignment_ack",
-        "order_id": 123,
-        "status": "accepted"
-        }
-        ```
-      parameters:
-      - description: Bearer token can also be passed as query parameter
-        in: query
-        name: Authorization
-        type: string
-      produces:
-      - application/json
-      responses:
-        "101":
-          description: Switching Protocols - WebSocket connection established
-          schema:
-            type: string
-        "400":
-          description: Bad request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: WebSocket heartbeat endpoint for drones
-      tags:
-      - drone-websocket
-  /drone/orders/{id}/deliver:
-    post:
-      consumes:
-      - application/json
-      description: Drone delivers an order to the dropoff location
-      parameters:
-      - description: Order ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Order delivered successfully
-          schema:
-            $ref: '#/definitions/iface.orderResponse'
-        "400":
-          description: Invalid request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: Order not found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "409":
-          description: Order cannot be delivered
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Deliver an order (Drone action)
-      tags:
-      - drone-actions
-  /drone/orders/{id}/fail:
-    post:
-      consumes:
-      - application/json
-      description: Drone reports that an order delivery has failed
-      parameters:
-      - description: Order ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Order marked as failed
-          schema:
-            $ref: '#/definitions/iface.orderResponse'
-        "400":
-          description: Invalid request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: Order not found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "409":
-          description: Order cannot be failed
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Fail an order (Drone action)
-      tags:
-      - drone-actions
-  /drone/orders/{id}/pickup:
-    post:
-      consumes:
-      - application/json
-      description: Drone picks up an order from the pickup location
-      parameters:
-      - description: Order ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Order picked up successfully
-          schema:
-            $ref: '#/definitions/iface.orderResponse'
-        "400":
-          description: Invalid request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: Order not found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "409":
-          description: Order cannot be picked up
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Pickup an order (Drone action)
-      tags:
-      - drone-actions
-  /drone/orders/{id}/reserve:
-    post:
-      consumes:
-      - application/json
-      description: Drone reserves a pending order for delivery
-      parameters:
-      - description: Order ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Order reserved successfully
-          schema:
-            $ref: '#/definitions/iface.orderResponse'
-        "400":
-          description: Invalid request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: Order not found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "409":
-          description: Order cannot be reserved
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Reserve an order (Drone action)
-      tags:
-      - drone-actions
   /health:
     get:
       description: Check if the API is running
@@ -934,6 +635,305 @@ paths:
       summary: Cancel an order
       tags:
       - orders
+  /orders/{id}/deliver:
+    post:
+      consumes:
+      - application/json
+      description: Drone delivers an order to the dropoff location
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Order delivered successfully
+          schema:
+            $ref: '#/definitions/iface.orderResponse'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Order not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Order cannot be delivered
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Deliver an order (Drone action)
+      tags:
+      - drone-actions
+  /orders/{id}/fail:
+    post:
+      consumes:
+      - application/json
+      description: Drone reports that an order delivery has failed
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Order marked as failed
+          schema:
+            $ref: '#/definitions/iface.orderResponse'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Order not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Order cannot be failed
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Fail an order (Drone action)
+      tags:
+      - drone-actions
+  /orders/{id}/pickup:
+    post:
+      consumes:
+      - application/json
+      description: Drone picks up an order from the pickup location
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Order picked up successfully
+          schema:
+            $ref: '#/definitions/iface.orderResponse'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Order not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Order cannot be picked up
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Pickup an order (Drone action)
+      tags:
+      - drone-actions
+  /orders/{id}/reserve:
+    post:
+      consumes:
+      - application/json
+      description: Drone reserves a pending order for delivery
+      parameters:
+      - description: Order ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Order reserved successfully
+          schema:
+            $ref: '#/definitions/iface.orderResponse'
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Order not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Order cannot be reserved
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Reserve an order (Drone action)
+      tags:
+      - drone-actions
+  /ws/heartbeat:
+    get:
+      consumes:
+      - application/json
+      description: |-
+        Establishes a WebSocket connection for drones to send heartbeat updates and receive assignments
+        The drone must authenticate with a Bearer token in the query parameter or header.
+
+        **Message Types:**
+
+        1. **Heartbeat** (Drone → Server):
+        ```json
+        {
+        "type": "heartbeat",
+        "lat": 40.7128,
+        "lng": -74.0060
+        }
+        ```
+
+        2. **Heartbeat Response** (Server → Drone):
+        ```json
+        {
+        "type": "heartbeat",
+        "message": "heartbeat received",
+        "timestamp": "2025-11-10T12:00:00Z"
+        }
+        ```
+
+        3. **Assignment** (Server → Drone):
+        ```json
+        {
+        "type": "assignment",
+        "drone_id": 1,
+        "order_id": 123,
+        "pickup_lat": 40.7128,
+        "pickup_lng": -74.0060,
+        "dropoff_lat": 40.7580,
+        "dropoff_lng": -73.9855,
+        "enduser_id": 456,
+        "order_status": "reserved",
+        "created_at": "2025-11-10T12:00:00Z"
+        }
+        ```
+
+        4. **Assignment Acknowledgment** (Drone → Server):
+        ```json
+        {
+        "type": "assignment_ack",
+        "order_id": 123,
+        "status": "accepted"
+        }
+        ```
+      parameters:
+      - description: Bearer token can also be passed as query parameter
+        in: query
+        name: Authorization
+        type: string
+      produces:
+      - application/json
+      responses:
+        "101":
+          description: Switching Protocols - WebSocket connection established
+          schema:
+            type: string
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: WebSocket heartbeat endpoint for drones
+      tags:
+      - drone-websocket
 schemes:
 - http
 securityDefinitions:

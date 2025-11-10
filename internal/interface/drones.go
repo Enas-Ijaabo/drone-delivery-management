@@ -67,7 +67,7 @@ type droneListResponse struct {
 // @Failure 401 {object} map[string]string "Unauthorized"
 // @Failure 404 {object} map[string]string "Drone not found"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /drone/drones/{id}/broken [post]
+// @Router /drones/{id}/broken [post]
 func (h *DroneHandler) MarkBroken(c *gin.Context) {
 	droneIDParam := c.Param("id")
 	droneID, err := strconv.ParseInt(droneIDParam, 10, 64)

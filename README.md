@@ -8,6 +8,8 @@ Authenticated REST + WebSocket API that powers drone deliveries: endusers place/
 
 ## Quick Start
 
+**Prerequisites:** Docker & Docker Compose (Go not required for running/testing)
+
 | Action | Command / URL |
 |--------|---------------|
 | Start stack | `docker compose up -d --build` |
@@ -15,7 +17,7 @@ Authenticated REST + WebSocket API that powers drone deliveries: endusers place/
 | Swagger UI | http://localhost:8080/swagger/index.html |
 | OpenAPI spec | http://localhost:8080/swagger/doc.json |
 | Logs | `docker compose logs -f app` |
-| Tests | `make test` |
+| Tests | `make test` (or `cd tests/at && ./api_smoke.sh`) |
 
 Default seeded accounts:
 
@@ -45,8 +47,7 @@ Use the returned token as `Authorization: Bearer <token>`.
 | | Mark broken (handoff trigger) | `POST /drones/{id}/broken` |
 | | Mark fixed | `POST /drones/{id}/fixed` |
 | | Heartbeat + location | WebSocket `/ws/heartbeat` (`heartbeat` message) |
-| | Receive assignments + ack | WebSocket `assignment` / `assignment_ack` |
-| | See current order | `GET /orders/{id}` (requires ownership or assignment) |
+| | Receive assignments + ack | WebSocket `/ws/heartbeat` (`assignment` / `assignment_ack`) |
 | **Enduser** | Submit order | `POST /orders` |
 | | Cancel before pickup | `POST /orders/{id}/cancel` |
 | | Track progress/location/ETA | `GET /orders/{id}` |
@@ -74,15 +75,22 @@ The domain layer (`internal/model`) contains business entities and rules, while 
 
 ## Makefile & Tooling
 
+Key targets:
+
 ```
-make build        # go build ./cmd/api
-make run          # go run ./cmd/api
-make test         # run acceptance suites in tests/at
-make swagger      # regenerate docs (requires swag CLI)
-make clean/tools  # housekeeping + install dev tools
+make up        # docker compose up -d --build (API + MySQL stack)
+make down      # docker compose down
+make logs      # follow container logs (app service)
+make build     # go build ./cmd/api -> bin/api
+make run       # go run ./cmd/api (local dev, needs DB running)
+make test      # acceptance suites in tests/at (expects API up)
+make swagger   # regenerate docs with swag (uses $(go env GOPATH)/bin/swag)
+make clean     # remove bin + generated Swagger artifacts
+make deps      # go mod download + tidy
+make tools     # go install github.com/swaggo/swag/cmd/swag@latest
 ```
 
-Swagger artifacts live in `docs/` and are served via `/swagger.yaml` and `/docs`.
+`make swagger` assumes the `swag` binary is available under `$(go env GOPATH)/bin`; run `make tools` once on a new machine to install it. Generated artifacts live in `docs/` and are served via `/swagger/index.html` and `/swagger/doc.json`.
 
 ---
 

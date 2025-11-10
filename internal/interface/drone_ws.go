@@ -139,7 +139,7 @@ func NewDroneWSHandler(uc DroneHeartbeatUsecase, registry *ConnectionRegistry) *
 // @Failure 400 {object} map[string]string "Bad request"
 // @Failure 401 {object} map[string]string "Unauthorized"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /drone/heartbeat [get]
+// @Router /ws/heartbeat [get]
 func (h *DroneWSHandler) HandleHeartbeat(c *gin.Context) {
 	conn, err := h.upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {

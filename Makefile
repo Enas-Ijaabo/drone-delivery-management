@@ -1,20 +1,35 @@
-.PHONY: swagger build run test clean
+.PHONY: swagger build run test clean up down logs
 
 # Generate Swagger documentation
 swagger:
 	@echo "Generating Swagger documentation..."
-	swag init -g main.go -o ./docs --parseDependency --parseInternal
+	$(shell go env GOPATH)/bin/swag init -g cmd/api/main.go -o ./docs --parseDependency --parseInternal
 	@echo "Swagger docs generated at ./docs/swagger.json and ./docs/swagger.yaml"
 
-# Build the application
+# Build the application (local, without Docker)
 build:
 	@echo "Building application..."
-	go build -o bin/api main.go
+	go build -o bin/api ./cmd/api
 
-# Run the application
+# Run the application (local, without Docker)
 run:
 	@echo "Running application..."
-	go run main.go
+	go run ./cmd/api
+
+# Docker: Start the stack
+up:
+	@echo "Starting Docker stack..."
+	docker compose up -d --build
+
+# Docker: Stop the stack
+down:
+	@echo "Stopping Docker stack..."
+	docker compose down
+
+# Docker: View logs
+logs:
+	@echo "Showing Docker logs..."
+	docker compose logs -f app
 
 # Run tests
 test:
@@ -41,11 +56,19 @@ tools:
 # Help
 help:
 	@echo "Available targets:"
+	@echo ""
+	@echo "Docker commands (no Go required):"
+	@echo "  up       - Start Docker stack (docker compose up -d --build)"
+	@echo "  down     - Stop Docker stack (docker compose down)"
+	@echo "  logs     - Show Docker logs (docker compose logs -f app)"
+	@echo "  test     - Run acceptance tests (requires bash/curl)"
+	@echo ""
+	@echo "Local development (requires Go 1.24+):"
 	@echo "  swagger  - Generate Swagger documentation"
-	@echo "  build    - Build the application"
-	@echo "  run      - Run the application"
-	@echo "  test     - Run acceptance tests"
-	@echo "  clean    - Clean build artifacts"
+	@echo "  build    - Build application locally (without Docker)"
+	@echo "  run      - Run application locally (without Docker)"
 	@echo "  deps     - Install Go dependencies"
 	@echo "  tools    - Install development tools (swag)"
-	@echo "  help     - Show this help message"
+	@echo ""
+	@echo "Other:"
+	@echo "  clean    - Clean build artifacts"

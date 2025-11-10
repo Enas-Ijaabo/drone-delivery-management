@@ -230,7 +230,7 @@ func (h *OrderHandler) GetOrder(c *gin.Context) {
 // @Failure 404 {object} map[string]string "Order not found"
 // @Failure 409 {object} map[string]string "Order cannot be reserved"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /drone/orders/{id}/reserve [post]
+// @Router /orders/{id}/reserve [post]
 func (h *OrderHandler) ReserveOrder(c *gin.Context) {
 	idStr := c.Param(paramOrderID)
 	orderID, err := strconv.ParseInt(idStr, 10, 64)
@@ -273,7 +273,7 @@ func (h *OrderHandler) ReserveOrder(c *gin.Context) {
 // @Failure 404 {object} map[string]string "Order not found"
 // @Failure 409 {object} map[string]string "Order cannot be picked up"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /drone/orders/{id}/pickup [post]
+// @Router /orders/{id}/pickup [post]
 func (h *OrderHandler) PickupOrder(c *gin.Context) {
 	idStr := c.Param(paramOrderID)
 	orderID, err := strconv.ParseInt(idStr, 10, 64)
@@ -316,7 +316,7 @@ func (h *OrderHandler) PickupOrder(c *gin.Context) {
 // @Failure 404 {object} map[string]string "Order not found"
 // @Failure 409 {object} map[string]string "Order cannot be delivered"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /drone/orders/{id}/deliver [post]
+// @Router /orders/{id}/deliver [post]
 func (h *OrderHandler) DeliverOrder(c *gin.Context) {
 	idStr := c.Param(paramOrderID)
 	orderID, err := strconv.ParseInt(idStr, 10, 64)
@@ -359,7 +359,7 @@ func (h *OrderHandler) DeliverOrder(c *gin.Context) {
 // @Failure 404 {object} map[string]string "Order not found"
 // @Failure 409 {object} map[string]string "Order cannot be failed"
 // @Failure 500 {object} map[string]string "Internal server error"
-// @Router /drone/orders/{id}/fail [post]
+// @Router /orders/{id}/fail [post]
 func (h *OrderHandler) FailOrder(c *gin.Context) {
 	idStr := c.Param(paramOrderID)
 	orderID, err := strconv.ParseInt(idStr, 10, 64)
