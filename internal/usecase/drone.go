@@ -2,16 +2,23 @@ package usecase
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
 	"github.com/Enas-Ijaabo/drone-delivery-management/internal/model"
 )
 
 type DroneUsecase struct {
-	droneRepo DroneRepo
+	droneRepo DroneHeartbeatRepo
 }
 
-func NewDroneUsecase(droneRepo DroneRepo) *DroneUsecase {
+type DroneHeartbeatRepo interface {
+	BeginTx(ctx context.Context) (*sql.Tx, error)
+	GetByIDForUpdate(ctx context.Context, tx *sql.Tx, id int64) (*model.Drone, error)
+	UpdateTx(ctx context.Context, tx *sql.Tx, drone *model.Drone) (*model.Drone, error)
+}
+
+func NewDroneUsecase(droneRepo DroneHeartbeatRepo) *DroneUsecase {
 	return &DroneUsecase{droneRepo: droneRepo}
 }
 

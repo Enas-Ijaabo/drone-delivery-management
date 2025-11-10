@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/Enas-Ijaabo/drone-delivery-management/internal/model"
 )
@@ -10,13 +11,26 @@ type AssignmentScheduler interface {
 	ScheduleAssignment(order model.Order)
 }
 
+type DroneStatusRepo interface {
+	BeginTx(ctx context.Context) (*sql.Tx, error)
+	GetByIDForUpdate(ctx context.Context, tx *sql.Tx, id int64) (*model.Drone, error)
+	UpdateTx(ctx context.Context, tx *sql.Tx, drone *model.Drone) (*model.Drone, error)
+	List(ctx context.Context, limit, offset int) ([]model.Drone, error)
+}
+
+type DroneOpsOrderRepo interface {
+	BeginTx(ctx context.Context) (*sql.Tx, error)
+	GetByIDForUpdate(ctx context.Context, tx *sql.Tx, id int64) (*model.Order, error)
+	UpdateTx(ctx context.Context, tx *sql.Tx, order *model.Order) (*model.Order, error)
+}
+
 type DroneOpsUsecase struct {
-	droneRepo DroneRepo
-	orderRepo OrderRepo
+	droneRepo DroneStatusRepo
+	orderRepo DroneOpsOrderRepo
 	scheduler AssignmentScheduler
 }
 
-func NewDroneOpsUsecase(droneRepo DroneRepo, orderRepo OrderRepo, scheduler AssignmentScheduler) *DroneOpsUsecase {
+func NewDroneOpsUsecase(droneRepo DroneStatusRepo, orderRepo DroneOpsOrderRepo, scheduler AssignmentScheduler) *DroneOpsUsecase {
 	return &DroneOpsUsecase{
 		droneRepo: droneRepo,
 		orderRepo: orderRepo,
@@ -111,4 +125,19 @@ func (uc *DroneOpsUsecase) ReportFixed(ctx context.Context, actorID, droneID int
 	}
 
 	return updatedDrone, nil
+}
+
+func (uc *DroneOpsUsecase) ListDrones(ctx context.Context, page, pageSize int) ([]model.Drone, int, int, error) {
+	page, pageSize, err := model.NormalizePagination(page, pageSize)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+
+	offset := (page - 1) * pageSize
+	drones, err := uc.droneRepo.List(ctx, pageSize, offset)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+
+	return drones, page, pageSize, nil
 }

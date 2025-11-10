@@ -63,6 +63,7 @@ const (
 	ErrCodeDroneActionNotAllowed           = "drone_action_not_allowed"
 	ErrCodeOrderRouteLocked                = "order_route_locked"
 	ErrCodeInvalidRouteUpdate              = "invalid_route_update"
+	ErrCodeInvalidPagination               = "invalid_pagination"
 )
 
 func ErrOrderTransitionNotAllowed(from, to string) *DomainError {
@@ -146,6 +147,14 @@ func ErrInvalidRouteUpdate() *DomainError {
 	return &DomainError{
 		Code:       ErrCodeInvalidRouteUpdate,
 		Message:    "route update requires pickup and/or dropoff coordinates",
+		StatusCode: 400,
+	}
+}
+
+func ErrInvalidPagination() *DomainError {
+	return &DomainError{
+		Code:       ErrCodeInvalidPagination,
+		Message:    "pagination parameters must be positive integers",
 		StatusCode: 400,
 	}
 }

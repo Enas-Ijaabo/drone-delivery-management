@@ -10,24 +10,24 @@ import (
 
 const (
 	getDroneByIDQuery = `
-		SELECT u.id, COALESCE(ds.status, 'idle'), ds.current_order_id, 
-		       COALESCE(ds.lat, 0.0), COALESCE(ds.lng, 0.0), 
+		SELECT ds.drone_id, ds.status, ds.current_order_id,
+		       ds.lat, ds.lng,
 		       ds.last_heartbeat_at, u.created_at, u.updated_at
-		FROM users u
-		LEFT JOIN drone_status ds ON u.id = ds.drone_id
-		WHERE u.id = ? AND u.type = 'drone'
+		FROM drone_status ds
+		JOIN users u ON u.id = ds.drone_id
+		WHERE ds.drone_id = ? AND u.type = 'drone'
 	`
 	getDroneByIDForUpdateQuery = `
-		SELECT u.id, COALESCE(ds.status, 'idle'), ds.current_order_id, 
-		       COALESCE(ds.lat, 0.0), COALESCE(ds.lng, 0.0), 
+		SELECT ds.drone_id, ds.status, ds.current_order_id,
+		       ds.lat, ds.lng,
 		       ds.last_heartbeat_at, u.created_at, u.updated_at
-		FROM users u
-		LEFT JOIN drone_status ds ON u.id = ds.drone_id
-		WHERE u.id = ? AND u.type = 'drone'
+		FROM drone_status ds
+		JOIN users u ON u.id = ds.drone_id
+		WHERE ds.drone_id = ? AND u.type = 'drone'
 		FOR UPDATE
 	`
 	findNearestIdleQuery = `
-		SELECT u.id, ds.status, ds.current_order_id,
+		SELECT ds.drone_id, ds.status, ds.current_order_id,
 		       ds.lat, ds.lng,
 		       ds.last_heartbeat_at, u.created_at, u.updated_at
 		FROM drone_status ds
@@ -43,6 +43,16 @@ const (
 		UPDATE drone_status 
 		SET status = ?, current_order_id = ?, lat = ?, lng = ?, location = ST_SRID(POINT(?, ?), 4326), last_heartbeat_at = ?, updated_at = NOW()
 		WHERE drone_id = ?
+	`
+	listDronesQuery = `
+		SELECT ds.drone_id, ds.status, ds.current_order_id,
+		       ds.lat, ds.lng, ds.last_heartbeat_at,
+		       u.created_at, u.updated_at
+		FROM drone_status ds
+		JOIN users u ON u.id = ds.drone_id
+		WHERE u.type = 'drone'
+		ORDER BY ds.drone_id
+		LIMIT ? OFFSET ?
 	`
 )
 
@@ -152,6 +162,38 @@ func (r *DroneRepo) FindNearestIdle(ctx context.Context, lat, lng float64) (*mod
 	}
 
 	return dbo.toModel(), nil
+}
+
+func (r *DroneRepo) List(ctx context.Context, limit, offset int) ([]model.Drone, error) {
+	rows, err := r.db.QueryContext(ctx, listDronesQuery, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var drones []model.Drone
+	for rows.Next() {
+		var dbo droneDBO
+		if err := rows.Scan(
+			&dbo.ID,
+			&dbo.Status,
+			&dbo.CurrentOrderID,
+			&dbo.Lat,
+			&dbo.Lng,
+			&dbo.LastHeartbeat,
+			&dbo.CreatedAt,
+			&dbo.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		drones = append(drones, *dbo.toModel())
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return drones, nil
 }
 
 func (dbo *droneDBO) toModel() *model.Drone {

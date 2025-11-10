@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/Enas-Ijaabo/drone-delivery-management/internal/model"
 	"github.com/gin-gonic/gin"
@@ -13,6 +14,7 @@ import (
 type DroneOpsUsecase interface {
 	ReportBroken(ctx context.Context, actorID, droneID int64, actorRole model.Role, location model.DroneHeartbeat) (*model.Drone, *model.Order, error)
 	ReportFixed(ctx context.Context, actorID, droneID int64, actorRole model.Role, location model.DroneHeartbeat) (*model.Drone, error)
+	ListDrones(ctx context.Context, page, pageSize int) ([]model.Drone, int, int, error)
 }
 
 type DroneHandler struct {
@@ -28,15 +30,27 @@ type droneLocationRequest struct {
 	Lng *float64 `json:"lng,omitempty"`
 }
 
-type droneBrokenResponse struct {
-	DroneID           int64   `json:"drone_id"`
-	Status            string  `json:"status"`
-	Lat               float64 `json:"lat"`
-	Lng               float64 `json:"lng"`
-	CurrentOrderID    *int64  `json:"current_order_id,omitempty"`
-	HandoffOrderID    *int64  `json:"handoff_order_id,omitempty"`
-	OrderStatus       *string `json:"order_status,omitempty"`
-	AssignmentPending bool    `json:"assignment_pending"`
+type droneStatusResponse struct {
+	DroneID           int64      `json:"drone_id"`
+	Status            string     `json:"status"`
+	Lat               float64    `json:"lat"`
+	Lng               float64    `json:"lng"`
+	CurrentOrderID    *int64     `json:"current_order_id,omitempty"`
+	HandoffOrderID    *int64     `json:"handoff_order_id,omitempty"`
+	OrderStatus       *string    `json:"order_status,omitempty"`
+	AssignmentPending bool       `json:"assignment_pending"`
+	LastHeartbeat     *time.Time `json:"last_heartbeat,omitempty"`
+}
+
+type paginationMeta struct {
+	Page     int  `json:"page"`
+	PageSize int  `json:"page_size"`
+	HasNext  bool `json:"has_next"`
+}
+
+type droneListResponse struct {
+	Data []droneStatusResponse `json:"data"`
+	Meta paginationMeta        `json:"meta"`
 }
 
 func (h *DroneHandler) MarkBroken(c *gin.Context) {
@@ -116,13 +130,33 @@ func (h *DroneHandler) MarkFixed(c *gin.Context) {
 	c.JSON(http.StatusOK, toDroneStatusResponse(drone, nil))
 }
 
-func toDroneStatusResponse(drone *model.Drone, order *model.Order) droneBrokenResponse {
-	resp := droneBrokenResponse{
+func (h *DroneHandler) List(c *gin.Context) {
+	page, pageSize, err := parsePaginationParams(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request", "message": err.Error()})
+		return
+	}
+
+	drones, normalizedPage, normalizedSize, err := h.ops.ListDrones(c.Request.Context(), page, pageSize)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	resp := toDroneListResponse(drones, normalizedPage, normalizedSize)
+	c.JSON(http.StatusOK, resp)
+}
+
+// Response converters
+
+func toDroneStatusResponse(drone *model.Drone, order *model.Order) droneStatusResponse {
+	resp := droneStatusResponse{
 		DroneID:        drone.ID,
 		Status:         string(drone.Status),
 		Lat:            drone.Lat,
 		Lng:            drone.Lng,
 		CurrentOrderID: drone.CurrentOrderID,
+		LastHeartbeat:  drone.LastHeartbeat,
 	}
 
 	if order != nil {
@@ -135,6 +169,49 @@ func toDroneStatusResponse(drone *model.Drone, order *model.Order) droneBrokenRe
 	}
 
 	return resp
+}
+
+func toDroneListResponse(drones []model.Drone, page, pageSize int) droneListResponse {
+	data := make([]droneStatusResponse, len(drones))
+	for i := range drones {
+		data[i] = toDroneStatusResponse(&drones[i], nil)
+	}
+
+	return droneListResponse{
+		Data: data,
+		Meta: toPaginationMeta(page, pageSize, len(drones)),
+	}
+}
+
+func toPaginationMeta(page, pageSize, resultCount int) paginationMeta {
+	return paginationMeta{
+		Page:     page,
+		PageSize: pageSize,
+		HasNext:  resultCount == pageSize,
+	}
+}
+
+func parsePaginationParams(c *gin.Context) (int, int, error) {
+	page := 0
+	pageSize := 0
+
+	if v := c.Query("page"); v != "" {
+		p, err := strconv.Atoi(v)
+		if err != nil {
+			return 0, 0, errors.New("page must be an integer")
+		}
+		page = p
+	}
+
+	if v := c.Query("page_size"); v != "" {
+		s, err := strconv.Atoi(v)
+		if err != nil {
+			return 0, 0, errors.New("page_size must be an integer")
+		}
+		pageSize = s
+	}
+
+	return page, pageSize, nil
 }
 
 func extractSubjectID(c *gin.Context) (int64, error) {

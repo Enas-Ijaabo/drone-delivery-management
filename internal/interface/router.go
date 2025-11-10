@@ -49,6 +49,7 @@ func NewRouter(authHandler *AuthHandler, orderHandler *OrderHandler, droneHandle
 	adminDrones := r.Group("/admin/drones")
 	adminDrones.Use(authMW, RequireRoles("admin"))
 	{
+		adminDrones.GET("", droneHandler.List)
 		adminDrones.POST("/:id/broken", droneHandler.MarkBroken)
 		adminDrones.POST("/:id/fixed", droneHandler.MarkFixed)
 	}

@@ -17,7 +17,7 @@ type OrderRepo interface {
 	BeginTx(ctx context.Context) (*sql.Tx, error)
 }
 
-type DroneRepo interface {
+type OrderDroneRepo interface {
 	GetByID(ctx context.Context, id int64) (*model.Drone, error)
 	GetByIDForUpdate(ctx context.Context, tx *sql.Tx, id int64) (*model.Drone, error)
 	UpdateTx(ctx context.Context, tx *sql.Tx, drone *model.Drone) (*model.Drone, error)
@@ -31,13 +31,13 @@ type AssignmentNotifier interface {
 
 type OrderUsecase struct {
 	orderRepo  OrderRepo
-	droneRepo  DroneRepo
+	droneRepo  OrderDroneRepo
 	notifier   AssignmentNotifier
 	assignTTL  time.Duration
 	workerPool chan struct{}
 }
 
-func NewOrderUsecase(orderRepo OrderRepo, droneRepo DroneRepo, notifier AssignmentNotifier) *OrderUsecase {
+func NewOrderUsecase(orderRepo OrderRepo, droneRepo OrderDroneRepo, notifier AssignmentNotifier) *OrderUsecase {
 	return &OrderUsecase{
 		orderRepo:  orderRepo,
 		droneRepo:  droneRepo,
