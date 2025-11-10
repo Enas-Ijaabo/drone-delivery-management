@@ -42,6 +42,12 @@ const (
 		    canceled_at = CASE WHEN ? = 'canceled' THEN NOW() ELSE canceled_at END
 		WHERE id = ?
 	`
+	listOrdersBaseQuery = `
+		SELECT id, enduser_id, pickup_lat, pickup_lng, dropoff_lat, dropoff_lng,
+		       status, assigned_drone_id, handoff_lat, handoff_lng,
+		       created_at, updated_at, canceled_at
+		FROM orders
+		WHERE 1=1`
 )
 
 type orderDBO struct {
@@ -171,6 +177,62 @@ func (r *OrderRepo) UpdateTx(ctx context.Context, tx *sql.Tx, order *model.Order
 	}
 
 	return r.GetByIDForUpdate(ctx, tx, order.ID)
+}
+
+func (r *OrderRepo) List(ctx context.Context, filters model.OrderListFilters, limit, offset int) ([]model.Order, error) {
+	query := listOrdersBaseQuery
+	args := make([]interface{}, 0, 5)
+
+	if filters.Status != nil {
+		query += " AND status = ?"
+		args = append(args, string(*filters.Status))
+	}
+	if filters.EnduserID != nil {
+		query += " AND enduser_id = ?"
+		args = append(args, *filters.EnduserID)
+	}
+	if filters.AssignedDroneID != nil {
+		query += " AND assigned_drone_id = ?"
+		args = append(args, *filters.AssignedDroneID)
+	}
+
+	query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
+	args = append(args, limit, offset)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var orders []model.Order
+	for rows.Next() {
+		var dbo orderDBO
+		if err := rows.Scan(
+			&dbo.ID,
+			&dbo.EnduserID,
+			&dbo.PickupLat,
+			&dbo.PickupLng,
+			&dbo.DropoffLat,
+			&dbo.DropoffLng,
+			&dbo.Status,
+			&dbo.AssignedDroneID,
+			&dbo.HandoffLat,
+			&dbo.HandoffLng,
+			&dbo.CreatedAt,
+			&dbo.UpdatedAt,
+			&dbo.CanceledAt,
+		); err != nil {
+			return nil, err
+		}
+		orders = append(orders, *toOrderModel(dbo))
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return orders, nil
 }
 
 func toOrderModel(dbo orderDBO) *model.Order {

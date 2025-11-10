@@ -15,6 +15,7 @@ type OrderRepo interface {
 	GetByIDForUpdate(ctx context.Context, tx *sql.Tx, id int64) (*model.Order, error)
 	UpdateTx(ctx context.Context, tx *sql.Tx, order *model.Order) (*model.Order, error)
 	BeginTx(ctx context.Context) (*sql.Tx, error)
+	List(ctx context.Context, filters model.OrderListFilters, limit, offset int) ([]model.Order, error)
 }
 
 type OrderDroneRepo interface {
@@ -363,6 +364,20 @@ func (uc *OrderUsecase) FailOrder(ctx context.Context, droneID, orderID int64) (
 	uc.triggerAssignmentIfPending(updatedOrder)
 
 	return updatedOrder, nil
+}
+
+func (uc *OrderUsecase) ListOrders(ctx context.Context, filters model.OrderListFilters, page, pageSize int) ([]model.Order, model.Pagination, error) {
+	pagination, err := model.NormalizePagination(page, pageSize)
+	if err != nil {
+		return nil, model.Pagination{}, err
+	}
+
+	orders, err := uc.orderRepo.List(ctx, filters, pagination.PageSize, pagination.Offset)
+	if err != nil {
+		return nil, model.Pagination{}, err
+	}
+
+	return orders, pagination, nil
 }
 
 func (uc *OrderUsecase) triggerAssignmentIfPending(order *model.Order) {

@@ -12,7 +12,10 @@ import (
 )
 
 const (
-	paramOrderID = "id"
+	paramOrderID            = "id"
+	queryParamStatus        = "status"
+	queryParamEnduserID     = "enduser_id"
+	queryParamAssignedDrone = "assigned_drone_id"
 )
 
 type OrderUsecase interface {
@@ -24,6 +27,7 @@ type OrderUsecase interface {
 	DeliverOrder(ctx context.Context, droneID, orderID int64) (*model.Order, error)
 	FailOrder(ctx context.Context, droneID, orderID int64) (*model.Order, error)
 	UpdateRoute(ctx context.Context, orderID int64, req model.UpdateRouteRequest) (*model.Order, error)
+	ListOrders(ctx context.Context, filters model.OrderListFilters, page, pageSize int) ([]model.Order, model.Pagination, error)
 }
 
 type OrderHandler struct {
@@ -66,6 +70,11 @@ type updateRouteRequest struct {
 	PickupLng  *float64 `json:"pickup_lng,omitempty"`
 	DropoffLat *float64 `json:"dropoff_lat,omitempty"`
 	DropoffLng *float64 `json:"dropoff_lng,omitempty"`
+}
+
+type orderListResponse struct {
+	Data []orderResponse `json:"data"`
+	Meta paginationMeta  `json:"meta"`
 }
 
 func (h *OrderHandler) CreateOrder(c *gin.Context) {
@@ -353,6 +362,75 @@ func parseOrderID(c *gin.Context) (int64, error) {
 		return 0, err
 	}
 	return orderID, nil
+}
+
+func (h *OrderHandler) AdminListOrders(c *gin.Context) {
+	filters, err := parseOrderFilters(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request", "message": err.Error()})
+		return
+	}
+
+	page, pageSize, err := parsePaginationParams(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request", "message": err.Error()})
+		return
+	}
+
+	orders, pagination, err := h.uc.ListOrders(c.Request.Context(), filters, page, pageSize)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	response := toOrderListResponse(orders, pagination)
+	c.JSON(http.StatusOK, response)
+}
+
+func parseOrderFilters(c *gin.Context) (model.OrderListFilters, error) {
+	var filters model.OrderListFilters
+
+	if status := c.Query(queryParamStatus); status != "" {
+		s := model.OrderStatus(status)
+		if !model.IsValidOrderStatus(s) {
+			return filters, errors.New("invalid status")
+		}
+		filters.Status = &s
+	}
+
+	if enduserStr := c.Query(queryParamEnduserID); enduserStr != "" {
+		id, err := strconv.ParseInt(enduserStr, 10, 64)
+		if err != nil || id <= 0 {
+			return filters, errors.New("enduser_id must be a positive integer")
+		}
+		filters.EnduserID = &id
+	}
+
+	if droneStr := c.Query(queryParamAssignedDrone); droneStr != "" {
+		id, err := strconv.ParseInt(droneStr, 10, 64)
+		if err != nil || id <= 0 {
+			return filters, errors.New("assigned_drone_id must be a positive integer")
+		}
+		filters.AssignedDroneID = &id
+	}
+
+	return filters, nil
+}
+
+func toOrderListResponse(orders []model.Order, pagination model.Pagination) orderListResponse {
+	data := make([]orderResponse, len(orders))
+	for i := range orders {
+		data[i] = toOrderResponse(orders[i])
+	}
+
+	return orderListResponse{
+		Data: data,
+		Meta: paginationMeta{
+			Page:     pagination.Page,
+			PageSize: pagination.PageSize,
+			HasNext:  pagination.HasNext(len(orders)),
+		},
+	}
 }
 
 func toCreateOrderModel(req createOrderRequest, userID int64) model.CreateOrderRequest {

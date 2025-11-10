@@ -1,26 +1,37 @@
 package model
 
 const (
-	DefaultPage     = 1
-	DefaultPageSize = 20
-	MaxPageSize     = 100
-	MinPage         = 1
-	MinPageSize     = 1
+	defaultPage     = 1
+	defaultPageSize = 20
+	maxPageSize     = 100
 )
 
-func NormalizePagination(page, pageSize int) (int, int, error) {
-	if page == 0 {
-		page = DefaultPage
-	}
-	if pageSize == 0 {
-		pageSize = DefaultPageSize
-	}
-	if page < MinPage || pageSize < MinPageSize {
-		return 0, 0, ErrInvalidPagination()
-	}
-	if pageSize > MaxPageSize {
-		pageSize = MaxPageSize
-	}
+type Pagination struct {
+	Page     int
+	PageSize int
+	Offset   int
+}
 
-	return page, pageSize, nil
+func NormalizePagination(page, pageSize int) (Pagination, error) {
+	if page <= 0 {
+		page = defaultPage
+	}
+	if pageSize <= 0 {
+		pageSize = defaultPageSize
+	}
+	if page < 1 || pageSize < 1 {
+		return Pagination{}, ErrInvalidPagination()
+	}
+	if pageSize > maxPageSize {
+		pageSize = maxPageSize
+	}
+	return Pagination{
+		Page:     page,
+		PageSize: pageSize,
+		Offset:   (page - 1) * pageSize,
+	}, nil
+}
+
+func (p Pagination) HasNext(resultCount int) bool {
+	return resultCount == p.PageSize
 }

@@ -399,3 +399,65 @@ init_tests() {
 run_step() { # alias counts setup actions as tests for visibility
   run_test "$@"
 }
+
+# =============================================================================
+# HELPER FUNCTIONS FOR TESTS
+# =============================================================================
+
+reserve_order() {
+  local drone_id="$1"
+  local drone_token="$2"
+  local order_id="$3"
+  req_auth POST "/orders/${order_id}/reserve" "$drone_token" '' 200
+}
+
+pickup_order() {
+  local drone_id="$1"
+  local drone_token="$2"
+  local order_id="$3"
+  req_auth POST "/orders/${order_id}/pickup" "$drone_token" '' 200
+}
+
+deliver_order() {
+  local drone_id="$1"
+  local drone_token="$2"
+  local order_id="$3"
+  req_auth POST "/orders/${order_id}/deliver" "$drone_token" '' 200
+}
+
+fail_order() {
+  local drone_id="$1"
+  local drone_token="$2"
+  local order_id="$3"
+  req_auth POST "/orders/${order_id}/fail" "$drone_token" '' 200
+}
+
+cancel_order() {
+  local enduser_token="$1"
+  local order_id="$2"
+  req_auth POST "/orders/${order_id}/cancel" "$enduser_token" '' 200
+}
+
+mark_drone_broken() {
+  local drone_id="$1"
+  local token="$2"
+  local lat="$3"
+  local lng="$4"
+  req_auth POST "/drones/${drone_id}/broken" "$token" "{\"lat\":$lat,\"lng\":$lng}" 200
+}
+
+mark_drone_fixed() {
+  local drone_id="$1"
+  local token="$2"
+  local lat="$3"
+  local lng="$4"
+  req_auth POST "/admin/drones/${drone_id}/fixed" "$token" "{\"lat\":$lat,\"lng\":$lng}" 200
+}
+
+get_drone_status() {
+  local drone_id="$1"
+  local token="$2"
+  local response
+  response=$(req_auth GET "/admin/drones?page_size=100" "$token" '' 200)
+  echo "$response" | jq -r --arg id "$drone_id" '.data[] | select(.drone_id == ($id | tonumber)) | .status'
+}

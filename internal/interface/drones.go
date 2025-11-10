@@ -14,7 +14,7 @@ import (
 type DroneOpsUsecase interface {
 	ReportBroken(ctx context.Context, actorID, droneID int64, actorRole model.Role, location model.DroneHeartbeat) (*model.Drone, *model.Order, error)
 	ReportFixed(ctx context.Context, actorID, droneID int64, actorRole model.Role, location model.DroneHeartbeat) (*model.Drone, error)
-	ListDrones(ctx context.Context, page, pageSize int) ([]model.Drone, int, int, error)
+	ListDrones(ctx context.Context, page, pageSize int) ([]model.Drone, model.Pagination, error)
 }
 
 type DroneHandler struct {
@@ -137,13 +137,13 @@ func (h *DroneHandler) List(c *gin.Context) {
 		return
 	}
 
-	drones, normalizedPage, normalizedSize, err := h.ops.ListDrones(c.Request.Context(), page, pageSize)
+	drones, pagination, err := h.ops.ListDrones(c.Request.Context(), page, pageSize)
 	if err != nil {
 		c.Error(err)
 		return
 	}
 
-	resp := toDroneListResponse(drones, normalizedPage, normalizedSize)
+	resp := toDroneListResponse(drones, pagination)
 	c.JSON(http.StatusOK, resp)
 }
 
@@ -171,7 +171,7 @@ func toDroneStatusResponse(drone *model.Drone, order *model.Order) droneStatusRe
 	return resp
 }
 
-func toDroneListResponse(drones []model.Drone, page, pageSize int) droneListResponse {
+func toDroneListResponse(drones []model.Drone, pagination model.Pagination) droneListResponse {
 	data := make([]droneStatusResponse, len(drones))
 	for i := range drones {
 		data[i] = toDroneStatusResponse(&drones[i], nil)
@@ -179,39 +179,16 @@ func toDroneListResponse(drones []model.Drone, page, pageSize int) droneListResp
 
 	return droneListResponse{
 		Data: data,
-		Meta: toPaginationMeta(page, pageSize, len(drones)),
+		Meta: toPaginationMeta(pagination, len(drones)),
 	}
 }
 
-func toPaginationMeta(page, pageSize, resultCount int) paginationMeta {
+func toPaginationMeta(pagination model.Pagination, resultCount int) paginationMeta {
 	return paginationMeta{
-		Page:     page,
-		PageSize: pageSize,
-		HasNext:  resultCount == pageSize,
+		Page:     pagination.Page,
+		PageSize: pagination.PageSize,
+		HasNext:  pagination.HasNext(resultCount),
 	}
-}
-
-func parsePaginationParams(c *gin.Context) (int, int, error) {
-	page := 0
-	pageSize := 0
-
-	if v := c.Query("page"); v != "" {
-		p, err := strconv.Atoi(v)
-		if err != nil {
-			return 0, 0, errors.New("page must be an integer")
-		}
-		page = p
-	}
-
-	if v := c.Query("page_size"); v != "" {
-		s, err := strconv.Atoi(v)
-		if err != nil {
-			return 0, 0, errors.New("page_size must be an integer")
-		}
-		pageSize = s
-	}
-
-	return page, pageSize, nil
 }
 
 func extractSubjectID(c *gin.Context) (int64, error) {

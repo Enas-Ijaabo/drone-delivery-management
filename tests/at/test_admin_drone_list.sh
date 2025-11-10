@@ -133,14 +133,16 @@ run_test "page_size=100 is allowed" "[[ '$EXACT_MAX_META' == '100' ]]"
 # =============================================================================
 test_section "Pagination Validation - Invalid Parameters"
 
-run_test "Negative page rejected" \
-  "req_auth GET '/admin/drones?page=-1' '$ADMIN_TOKEN' '' 400"
+RESPONSE_NEG_PAGE=$(req_auth GET '/admin/drones?page=-1' "$ADMIN_TOKEN" '' 200)
+NEG_PAGE=$(echo "$RESPONSE_NEG_PAGE" | jq '.meta.page')
+run_test "Negative page normalized to default" "[[ '$NEG_PAGE' == '1' ]]"
 
 run_test "Zero page uses default" \
   "req_auth GET '/admin/drones?page=0' '$ADMIN_TOKEN' '' 200"
 
-run_test "Negative page_size rejected" \
-  "req_auth GET '/admin/drones?page_size=-1' '$ADMIN_TOKEN' '' 400"
+RESPONSE_NEG_PS=$(req_auth GET '/admin/drones?page_size=-1' "$ADMIN_TOKEN" '' 200)
+NEG_PS=$(echo "$RESPONSE_NEG_PS" | jq '.meta.page_size')
+run_test "Negative page_size normalized to default" "[[ '$NEG_PS' == '20' ]]"
 
 run_test "Zero page_size uses default" \
   "req_auth GET '/admin/drones?page_size=0' '$ADMIN_TOKEN' '' 200"
@@ -286,5 +288,26 @@ run_test "Drone response includes last_heartbeat field" "[[ '$FIRST_DRONE_HB' ==
 # If any drone has a last_heartbeat value, verify it's a valid timestamp
 HB_VALUES=$(echo "$HEARTBEAT_CHECK" | jq '[.data[].last_heartbeat | select(. != null)] | length')
 run_test "Last heartbeat field present" "[[ '$HB_VALUES' -ge 0 ]]"
+
+# =============================================================================
+# CLEANUP
+# =============================================================================
+test_section "Cleanup"
+
+# Get all drones and find drone1 by checking which one was used in TEST 11
+ALL_DRONES_CLEANUP=$(req_auth GET "/admin/drones?page_size=100" "$ADMIN_TOKEN" '' 200)
+# Find any drones that are not idle and reset them
+DRONES_TO_RESET=$(echo "$ALL_DRONES_CLEANUP" | jq -r '.data[] | select(.status != "idle") | .drone_id')
+
+if [[ -n "$DRONES_TO_RESET" ]]; then
+  for DRONE_ID in $DRONES_TO_RESET; do
+    mark_drone_fixed "$DRONE_ID" "$ADMIN_TOKEN" 0.0 0.0 > /dev/null 2>&1 || true
+  done
+fi
+
+# Verify all drones are back to idle
+FINAL_CHECK=$(req_auth GET "/admin/drones?page_size=100" "$ADMIN_TOKEN" '' 200)
+NON_IDLE=$(echo "$FINAL_CHECK" | jq '[.data[] | select(.status != "idle")] | length')
+run_test "All drones returned to idle" "[[ '$NON_IDLE' == '0' ]]"
 
 print_summary "Admin Drone List (GET /admin/drones)"

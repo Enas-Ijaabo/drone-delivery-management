@@ -127,17 +127,16 @@ func (uc *DroneOpsUsecase) ReportFixed(ctx context.Context, actorID, droneID int
 	return updatedDrone, nil
 }
 
-func (uc *DroneOpsUsecase) ListDrones(ctx context.Context, page, pageSize int) ([]model.Drone, int, int, error) {
-	page, pageSize, err := model.NormalizePagination(page, pageSize)
+func (uc *DroneOpsUsecase) ListDrones(ctx context.Context, page, pageSize int) ([]model.Drone, model.Pagination, error) {
+	pagination, err := model.NormalizePagination(page, pageSize)
 	if err != nil {
-		return nil, 0, 0, err
+		return nil, model.Pagination{}, err
 	}
 
-	offset := (page - 1) * pageSize
-	drones, err := uc.droneRepo.List(ctx, pageSize, offset)
+	drones, err := uc.droneRepo.List(ctx, pagination.PageSize, pagination.Offset)
 	if err != nil {
-		return nil, 0, 0, err
+		return nil, model.Pagination{}, err
 	}
 
-	return drones, page, pageSize, nil
+	return drones, pagination, nil
 }

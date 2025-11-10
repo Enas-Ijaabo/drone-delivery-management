@@ -57,6 +57,7 @@ func NewRouter(authHandler *AuthHandler, orderHandler *OrderHandler, droneHandle
 	adminOrders := r.Group("/admin/orders")
 	adminOrders.Use(authMW, RequireRoles("admin"))
 	{
+		adminOrders.GET("", orderHandler.AdminListOrders)
 		adminOrders.PATCH("/:id", orderHandler.AdminUpdateRoute)
 	}
 
