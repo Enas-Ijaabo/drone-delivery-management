@@ -2,6 +2,7 @@ package iface
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
@@ -22,6 +23,7 @@ type OrderUsecase interface {
 	PickupOrder(ctx context.Context, droneID, orderID int64) (*model.Order, error)
 	DeliverOrder(ctx context.Context, droneID, orderID int64) (*model.Order, error)
 	FailOrder(ctx context.Context, droneID, orderID int64) (*model.Order, error)
+	UpdateRoute(ctx context.Context, orderID int64, req model.UpdateRouteRequest) (*model.Order, error)
 }
 
 type OrderHandler struct {
@@ -57,6 +59,13 @@ type orderResponse struct {
 	ETAMinutes      *model.ETA        `json:"eta_minutes,omitempty"`
 	HandoffLat      *float64          `json:"handoff_lat,omitempty"`
 	HandoffLng      *float64          `json:"handoff_lng,omitempty"`
+}
+
+type updateRouteRequest struct {
+	PickupLat  *float64 `json:"pickup_lat,omitempty"`
+	PickupLng  *float64 `json:"pickup_lng,omitempty"`
+	DropoffLat *float64 `json:"dropoff_lat,omitempty"`
+	DropoffLng *float64 `json:"dropoff_lng,omitempty"`
 }
 
 func (h *OrderHandler) CreateOrder(c *gin.Context) {
@@ -266,6 +275,84 @@ func (h *OrderHandler) FailOrder(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, toOrderResponse(*order))
+}
+
+func (h *OrderHandler) AdminUpdateRoute(c *gin.Context) {
+	orderID, err := parseOrderID(c)
+	if err != nil {
+		return
+	}
+
+	var req updateRouteRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request", "message": "invalid json body"})
+		return
+	}
+
+	if err := validateRouteUpdate(req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request", "message": err.Error()})
+		return
+	}
+
+	modelReq := model.UpdateRouteRequest{
+		PickupLat:  req.PickupLat,
+		PickupLng:  req.PickupLng,
+		DropoffLat: req.DropoffLat,
+		DropoffLng: req.DropoffLng,
+	}
+
+	order, err := h.uc.UpdateRoute(c.Request.Context(), orderID, modelReq)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, toOrderResponse(*order))
+}
+
+func validateRouteUpdate(req updateRouteRequest) error {
+	hasPickup := req.PickupLat != nil || req.PickupLng != nil
+	hasDropoff := req.DropoffLat != nil || req.DropoffLng != nil
+
+	if !hasPickup && !hasDropoff {
+		return errors.New("pickup or dropoff coordinates are required")
+	}
+
+	if hasPickup {
+		if req.PickupLat == nil || req.PickupLng == nil {
+			return errors.New("pickup_lat and pickup_lng must both be provided")
+		}
+		if *req.PickupLat < -90 || *req.PickupLat > 90 {
+			return errors.New("pickup latitude must be between -90 and 90")
+		}
+		if *req.PickupLng < -180 || *req.PickupLng > 180 {
+			return errors.New("pickup longitude must be between -180 and 180")
+		}
+	}
+
+	if hasDropoff {
+		if req.DropoffLat == nil || req.DropoffLng == nil {
+			return errors.New("dropoff_lat and dropoff_lng must both be provided")
+		}
+		if *req.DropoffLat < -90 || *req.DropoffLat > 90 {
+			return errors.New("dropoff latitude must be between -90 and 90")
+		}
+		if *req.DropoffLng < -180 || *req.DropoffLng > 180 {
+			return errors.New("dropoff longitude must be between -180 and 180")
+		}
+	}
+
+	return nil
+}
+
+func parseOrderID(c *gin.Context) (int64, error) {
+	idStr := c.Param(paramOrderID)
+	orderID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil || orderID <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid_request", "message": "invalid order id"})
+		return 0, err
+	}
+	return orderID, nil
 }
 
 func toCreateOrderModel(req createOrderRequest, userID int64) model.CreateOrderRequest {

@@ -53,5 +53,11 @@ func NewRouter(authHandler *AuthHandler, orderHandler *OrderHandler, droneHandle
 		adminDrones.POST("/:id/fixed", droneHandler.MarkFixed)
 	}
 
+	adminOrders := r.Group("/admin/orders")
+	adminOrders.Use(authMW, RequireRoles("admin"))
+	{
+		adminOrders.PATCH("/:id", orderHandler.AdminUpdateRoute)
+	}
+
 	return r
 }

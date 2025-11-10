@@ -61,6 +61,8 @@ const (
 	ErrCodeInvalidLatitude                 = "invalid_latitude"
 	ErrCodeInvalidLongitude                = "invalid_longitude"
 	ErrCodeDroneActionNotAllowed           = "drone_action_not_allowed"
+	ErrCodeOrderRouteLocked                = "order_route_locked"
+	ErrCodeInvalidRouteUpdate              = "invalid_route_update"
 )
 
 func ErrOrderTransitionNotAllowed(from, to string) *DomainError {
@@ -129,5 +131,21 @@ func ErrDroneActionNotAllowed() *DomainError {
 		Message:    "drone cannot perform this action",
 		Details:    make(map[string]interface{}),
 		StatusCode: 403,
+	}
+}
+
+func ErrOrderRouteLocked() *DomainError {
+	return &DomainError{
+		Code:       ErrCodeOrderRouteLocked,
+		Message:    "route can only be updated while order is pending",
+		StatusCode: 409,
+	}
+}
+
+func ErrInvalidRouteUpdate() *DomainError {
+	return &DomainError{
+		Code:       ErrCodeInvalidRouteUpdate,
+		Message:    "route update requires pickup and/or dropoff coordinates",
+		StatusCode: 400,
 	}
 }

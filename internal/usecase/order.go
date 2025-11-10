@@ -117,6 +117,34 @@ func (uc *OrderUsecase) GetOrder(ctx context.Context, userID, orderID int64) (*m
 	return &details, nil
 }
 
+func (uc *OrderUsecase) UpdateRoute(ctx context.Context, orderID int64, req model.UpdateRouteRequest) (*model.Order, error) {
+	tx, err := uc.orderRepo.BeginTx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	order, err := uc.orderRepo.GetByIDForUpdate(ctx, tx, orderID)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := order.UpdateRoute(req); err != nil {
+		return nil, err
+	}
+
+	updatedOrder, err := uc.orderRepo.UpdateTx(ctx, tx, order)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return updatedOrder, nil
+}
+
 func (uc *OrderUsecase) AssignOrder(ctx context.Context, order model.Order) error {
 	if uc.notifier == nil {
 		return nil

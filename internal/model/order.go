@@ -12,6 +12,13 @@ type CreateOrderRequest struct {
 	DropoffLng float64
 }
 
+type UpdateRouteRequest struct {
+	PickupLat  *float64
+	PickupLng  *float64
+	DropoffLat *float64
+	DropoffLng *float64
+}
+
 type DroneLocation struct {
 	Lat float64
 	Lng float64
@@ -180,4 +187,52 @@ func (o *Order) HandoffOrder(handoffLat, handoffLng float64) bool {
 	default:
 		return false
 	}
+}
+
+func (o *Order) UpdateRoute(req UpdateRouteRequest) error {
+	if o.Status != OrderPending {
+		return ErrOrderRouteLocked()
+	}
+
+	hasPickup := req.PickupLat != nil || req.PickupLng != nil
+	hasDropoff := req.DropoffLat != nil || req.DropoffLng != nil
+	if !hasPickup && !hasDropoff {
+		return ErrInvalidRouteUpdate()
+	}
+
+	if hasPickup {
+		lat, lng, err := validateRouteCoordinates(req.PickupLat, req.PickupLng)
+		if err != nil {
+			return err
+		}
+		o.PickupLat = lat
+		o.PickupLng = lng
+	}
+
+	if hasDropoff {
+		lat, lng, err := validateRouteCoordinates(req.DropoffLat, req.DropoffLng)
+		if err != nil {
+			return err
+		}
+		o.DropoffLat = lat
+		o.DropoffLng = lng
+	}
+
+	o.HandoffLat = nil
+	o.HandoffLng = nil
+
+	return nil
+}
+
+func validateRouteCoordinates(lat, lng *float64) (float64, float64, error) {
+	if lat == nil || lng == nil {
+		return 0, 0, ErrInvalidRouteUpdate()
+	}
+	if *lat < -90 || *lat > 90 {
+		return 0, 0, ErrInvalidLatitude(*lat)
+	}
+	if *lng < -180 || *lng > 180 {
+		return 0, 0, ErrInvalidLongitude(*lng)
+	}
+	return *lat, *lng, nil
 }
