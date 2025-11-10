@@ -53,9 +53,6 @@ Use the returned token as `Authorization: Bearer <token>`.
 | | Update origin/destination (pending only) | `PATCH /admin/orders/{id}` |
 | | List drones | `GET /admin/drones` |
 | | Mark drone broken/fixed | `POST /admin/drones/{id}/broken` / `/fixed` |
-
-Broken drone rule: whenever a drone marks itself (or is marked) broken, its current order is converted to a handoff and the scheduler reassigns it—even if that drone later self-fixes.
-
 ---
 
 ## Architecture Overview
