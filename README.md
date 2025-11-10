@@ -1,185 +1,141 @@
-# Drone Delivery Management – Local Dev
+# Drone Delivery Management Backend
 
-## Structure (DDD)
-- `cmd/api` – wiring/bootstrap (main)
-- `internal/model` – entities, value objects, domain logic
-- `internal/usecase` – application services (business flows)
-- `internal/interface` – HTTP handlers, middleware, DTOs
-- `internal/repo` – repository interfaces + MySQL impl
-- `migrations` – SQL schema + seed
 
-## Prerequisites
-- Docker Desktop
-- Go (optional for other workflows)
+Authenticated REST + WebSocket API that powers drone deliveries: endusers place/track orders, drones execute them, admins monitor/override. Built with DDD separation (model/usecase/interface/repo), JWT auth, MySQL, polished Swagger docs, and comprehensive tests.
 
-## Run with Docker Compose
-```bash
-docker compose up -d --build
-```
-- Status: `docker compose ps`
-- Logs: `docker compose logs -f app`
-- Health: http://localhost:8080/health
+---
 
-## Reset DB and re-apply migrations
-```bash
-docker compose down -v
-docker compose up -d --build
-```
+## Quick Start
 
-## API Documentation (Swagger/OpenAPI)
+| Action | Command / URL |
+|--------|---------------|
+| Start stack | `docker compose up -d --build` |
+| Health check | http://localhost:8080/health |
+| Swagger UI | http://localhost:8080/swagger/index.html |
+| OpenAPI spec | http://localhost:8080/swagger/doc.json |
+| Logs | `docker compose logs -f app` |
+| Tests | `make test` |
 
-The API includes comprehensive Swagger/OpenAPI documentation for all endpoints.
+Default seeded accounts:
 
-### Access Swagger UI
-Once the application is running, access the interactive API documentation at:
-- **Swagger UI**: http://localhost:8080/swagger/index.html
-- **OpenAPI JSON**: http://localhost:8080/swagger/doc.json
-- **OpenAPI YAML**: `docs/swagger.yaml`
+| Role | Username | Password |
+|------|----------|----------|
+| Enduser | enduser1, enduser2 | password |
+| Drone | drone1, drone2 | password |
+| Admin | admin | password |
 
-### Documented Endpoints
-
-| Category | Endpoint | Method | Description |
-|----------|----------|--------|-------------|
-| **Health** | `/health` | GET | Service health check |
-| **Auth** | `/auth/token` | POST | User authentication (returns JWT) |
-| **Orders** | `/orders` | POST | Create new delivery order |
-| | `/orders/{id}` | GET | Get order details |
-| | `/orders/{id}/cancel` | POST | Cancel an order |
-| **Drone Actions** | `/drone/orders/{id}/reserve` | POST | Reserve order for delivery |
-| | `/drone/orders/{id}/pickup` | POST | Mark order as picked up |
-| | `/drone/orders/{id}/deliver` | POST | Mark order as delivered |
-| | `/drone/orders/{id}/fail` | POST | Mark order as failed |
-| **Admin - Orders** | `/admin/orders` | GET | List all orders (with filters) |
-| | `/admin/orders/{id}` | PATCH | Update order route |
-| **Admin - Drones** | `/admin/drones` | GET | List all drones |
-| | `/admin/drones/{id}/fixed` | POST | Mark drone as fixed |
-| **Drones** | `/drone/drones/{id}/broken` | POST | Report drone as broken |
-| **WebSocket** | `/drone/heartbeat` | WS | Real-time drone heartbeat & assignments |
-
-### WebSocket Messages
-
-The `/drone/heartbeat` WebSocket endpoint supports the following message types:
-
-**1. Heartbeat (Drone → Server)**
-```json
-{
-  "type": "heartbeat",
-  "lat": 40.7128,
-  "lng": -74.0060
-}
-```
-
-**2. Heartbeat Response (Server → Drone)**
-```json
-{
-  "type": "heartbeat",
-  "message": "heartbeat received",
-  "timestamp": "2025-11-10T12:00:00Z"
-}
-```
-
-**3. Assignment (Server → Drone)**
-```json
-{
-  "type": "assignment",
-  "drone_id": 1,
-  "order_id": 123,
-  "pickup_lat": 40.7128,
-  "pickup_lng": -74.0060,
-  "dropoff_lat": 40.7580,
-  "dropoff_lng": -73.9855,
-  "enduser_id": 456,
-  "order_status": "reserved",
-  "created_at": "2025-11-10T12:00:00Z"
-}
-```
-
-**4. Assignment Acknowledgment (Drone → Server)**
-```json
-{
-  "type": "assignment_ack",
-  "order_id": 123,
-  "status": "accepted"
-}
-```
-
-### Authentication
-
-Most endpoints require authentication with a Bearer JWT token:
-
-1. **Login to get token:**
+Auth token sample:
 ```bash
 curl -X POST http://localhost:8080/auth/token \
   -H "Content-Type: application/json" \
-  -d '{"name": "enduser1", "password": "password123"}'
+  -d '{"name":"enduser1","password":"password"}'
+```
+Use the returned token as `Authorization: Bearer <token>`.
+
+---
+
+## Acceptance Criteria Coverage
+
+| Persona | Requirement | API |
+|---------|-------------|-----|
+| **Drone** | Reserve job | `POST /orders/{id}/reserve` (drone role) |
+| | Grab order (origin / handoff) | `POST /orders/{id}/pickup` |
+| | Deliver / fail | `POST /orders/{id}/deliver` / `POST /orders/{id}/fail` |
+| | Mark broken (handoff trigger) | `POST /drones/{id}/broken` |
+| | Mark fixed | `POST /drones/{id}/fixed` |
+| | Heartbeat + location | WebSocket `/ws/heartbeat` (`heartbeat` message) |
+| | Receive assignments + ack | WebSocket `assignment` / `assignment_ack` |
+| | See current order | `GET /orders/{id}` (requires ownership or assignment) |
+| **Enduser** | Submit order | `POST /orders` |
+| | Cancel before pickup | `POST /orders/{id}/cancel` |
+| | Track progress/location/ETA | `GET /orders/{id}` |
+| **Admin** | List orders (filters + pagination) | `GET /admin/orders` |
+| | Update origin/destination (pending only) | `PATCH /admin/orders/{id}` |
+| | List drones | `GET /admin/drones` |
+| | Mark drone broken/fixed | `POST /admin/drones/{id}/broken` / `/fixed` |
+
+Broken drone rule: whenever a drone marks itself (or is marked) broken, its current order is converted to a handoff and the scheduler reassigns it—even if that drone later self-fixes.
+
+---
+
+## Architecture Overview
+
+This project follows **Domain-Driven Design (DDD)** principles with clear separation of concerns:
+
+- **cmd/api** - wiring/bootstrap (inject repos, usecases, handlers)
+- **internal/model** - entities (Order, Drone), value objects, domain invariants
+- **internal/usecase** - application services (auth, orders, drone ops, scheduler)
+- **internal/interface** - HTTP routes (Gin), middleware, DTOs, WebSocket handler
+- **internal/repo** - MySQL repos with spatial coordinates + pagination
+- **migrations** - schema + seed users
+- **tests/at** - acceptance suites (bash + curl + websocket helpers)
+
+The domain layer (`internal/model`) contains business entities and rules, while infrastructure concerns (HTTP, database, WebSocket) are isolated in outer layers. This makes the codebase testable, maintainable, and easy to extend.
+
+Tech stack: Go 1.24, Gin, gorilla/websocket, MySQL 8 (with spatial), JWT (golang-jwt), Docker Compose. Swagger docs generated with `swag`.
+
+---
+
+## Makefile & Tooling
+
+```
+make build        # go build ./cmd/api
+make run          # go run ./cmd/api
+make test         # run acceptance suites in tests/at
+make swagger      # regenerate docs (requires swag CLI)
+make clean/tools  # housekeeping + install dev tools
 ```
 
-2. **Use token in requests:**
-```bash
-curl -X GET http://localhost:8080/orders/1 \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
-```
+Swagger artifacts live in `docs/` and are served via `/swagger.yaml` and `/docs`.
 
-### Regenerate Swagger Docs
-
-If you modify API handlers and need to regenerate documentation:
-
-```bash
-make swagger
-```
-
-Or manually:
-```bash
-~/go/bin/swag init -g cmd/api/main.go -o docs
-```
-
-## Makefile Commands
-
-The project includes a Makefile with common development tasks:
-
-```bash
-make swagger    # Generate Swagger/OpenAPI documentation
-make build      # Build the application binary
-make run        # Run the application locally
-make test       # Run all acceptance tests
-make clean      # Clean build artifacts
-make deps       # Download Go dependencies
-make tools      # Install development tools (swag)
-```
+---
 
 ## Testing
 
-The project includes comprehensive acceptance tests in the `tests/at/` directory:
+Acceptance tests in `tests/at/` cover:
+- Auth (JWT issuance + role enforcement)
+- Enduser order lifecycle (create, cancel, track ETA/location)
+- Drone workflows (reserve/pickup/deliver/fail, broken/fixed handoff)
+- WebSocket heartbeat + assignment flow
+- Admin order/drones endpoints (filters, pagination, route updates)
 
-```bash
-# Run all tests
-make test
+Run all: `make test` (or `cd tests/at && ./api_smoke.sh`).
 
-# Or run manually
-cd tests/at && ./api_smoke.sh
-```
+**CI/CD:** GitHub Actions workflows automatically run all tests on push/PR (see `.github/workflows/`).
 
-**Test Coverage:**
-- 422 total acceptance tests
-- 100% pass rate
-- Tests cover all API endpoints, authentication, authorization, state management, and WebSocket functionality
+---
 
-## Default Users (Seeded in Database)
+## WebSocket Reference (`/ws/heartbeat`)
 
-| Username | Password | Role | User ID |
-|----------|----------|------|---------|
-| `enduser1` | `password123` | enduser | 1 |
-| `enduser2` | `password123` | enduser | 2 |
-| `drone1` | `password123` | drone | 3 |
-| `drone2` | `password123` | drone | 4 |
-| `admin1` | `password123` | admin | 5 |
+| Direction | Message | Sample |
+|-----------|---------|--------|
+| Drone -> Server | Heartbeat | `{"type":"heartbeat","lat":31.0,"lng":35.0}` |
+| Server -> Drone | Heartbeat ack | `{"type":"heartbeat","message":"ok","timestamp":"..."}` |
+| Server -> Drone | Assignment | `{"type":"assignment","order_id":123,"description":"handoff|new_order",...}` |
+| Drone -> Server | Assignment ack | `{"type":"assignment_ack","order_id":123,"status":"accepted|declined"}` |
 
-## Technology Stack
+---
 
-- **Language**: Go 1.24
-- **Web Framework**: Gin
-- **Database**: MySQL 8.0
-- **WebSocket**: gorilla/websocket
-- **Authentication**: JWT (golang-jwt/jwt)
-- **API Documentation**: Swagger/OpenAPI 2.0
-- **Containerization**: Docker & Docker Compose
+## Future Improvements
+
+The current implementation meets the assessment scope; if this became a production service, I would focus next on:
+
+- **Horizontal WebSocket Scaling**: Add Redis Pub/Sub or NATS to route assignment notifications across multiple backend instances
+- **Background Assignment Scheduler**: Implement retry logic with exponential backoff for failed assignments
+- **Unit & Integration Testing**: Add Go unit tests for domain logic and integration tests with test containers
+- **Database Read Replicas**: Split connection pools for read/write operations to scale throughput
+- **Observability**: Structured logging with correlation IDs, Prometheus metrics, distributed tracing
+- **Operational**: Graceful shutdown for WebSockets, rate limiting, JWT refresh tokens, database migration tooling
+
+---
+
+## Notes for Reviewers
+
+- JWT middleware enforces issuer/audience + role (`RequireRoles(...)`).
+- Order route updates locked to `pending` state to protect assignments/ETAs.
+- Drone broken workflow updates handoff coordinates, clears assignments, and requeues orders via scheduler.
+- Assignment logic uses MySQL spatial indexing (`ST_Distance_Sphere` with `POINT SRID 4326`) to find the nearest idle drone for each order.
+- Pagination + filters for admin list endpoints reuse domain helpers (consistent defaults and caps).
+- Swagger UI hosted via `/swagger/index.html`; raw spec at `/swagger/doc.json`.
+
+Everything needed to run, inspect, and test the system is above—reach out if any detail would help the review!
