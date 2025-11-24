@@ -37,7 +37,7 @@ Use the returned token as `Authorization: Bearer <token>`.
 
 ---
 
-## Acceptance Criteria Coverage
+## Feature Coverage
 
 | Persona | Requirement | API |
 |---------|-------------|-----|
@@ -122,7 +122,7 @@ Run all: `make test` (or `cd tests/at && ./api_smoke.sh`).
 
 ## Future Improvements
 
-The current implementation meets the assessment scope; if this became a production service, I would focus next on:
+Key enhancements planned for a production roll-out include:
 
 - **Horizontal WebSocket Scaling**: Add Redis Pub/Sub or NATS to route assignment notifications across multiple backend instances
 - **Background Assignment Scheduler**: Implement retry logic with exponential backoff for failed assignments
@@ -133,7 +133,7 @@ The current implementation meets the assessment scope; if this became a producti
 
 ---
 
-## Notes for Reviewers
+## Implementation Notes
 
 - JWT middleware enforces issuer/audience + role (`RequireRoles(...)`).
 - Order route updates locked to `pending` state to protect assignments/ETAs.
@@ -142,4 +142,4 @@ The current implementation meets the assessment scope; if this became a producti
 - Pagination + filters for admin list endpoints reuse domain helpers (consistent defaults and caps).
 - Swagger UI hosted via `/swagger/index.html`; raw spec at `/swagger/doc.json`.
 
-Everything needed to run, inspect, and test the system is above—reach out if any detail would help the review!
+Everything needed to run, inspect, and test the system is above—open an issue if anything is unclear.
