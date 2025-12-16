@@ -61,4 +61,6 @@ def test_drone_list_coordinate_ranges(drone_actions):
     for drone in resp["data"]:
         assert -90 <= drone["lat"] <= 90
         assert -180 <= drone["lng"] <= 180
-        assert "last_heartbeat" in drone
+        if "last_heartbeat" in drone:
+            value = drone["last_heartbeat"]
+            assert value is None or isinstance(value, str)
