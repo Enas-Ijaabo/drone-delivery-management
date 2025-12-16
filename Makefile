@@ -33,8 +33,10 @@ logs:
 
 # Run tests
 test:
-	@echo "Running tests..."
-	cd tests/at && ./api_smoke.sh
+	@echo "Installing acceptance test dependencies..."
+	python3 -m pip install --user -r tests/requirements.txt >/dev/null
+	@echo "Running pytest acceptance tests..."
+	python3 -m pytest
 
 # Clean build artifacts
 clean:
@@ -61,7 +63,7 @@ help:
 	@echo "  up       - Start Docker stack (docker compose up -d --build)"
 	@echo "  down     - Stop Docker stack (docker compose down)"
 	@echo "  logs     - Show Docker logs (docker compose logs -f app)"
-	@echo "  test     - Run acceptance tests (requires bash/curl)"
+	@echo "  test     - Run pytest acceptance tests (requires Python + requests + websocket-client)"
 	@echo ""
 	@echo "Local development (requires Go 1.24+):"
 	@echo "  swagger  - Generate Swagger documentation"

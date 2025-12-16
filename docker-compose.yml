@@ -34,5 +34,18 @@ services:
     ports:
       - "8080:8080"
 
+  tests:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: acceptance-tests
+    profiles: ["test"]
+    environment:
+      BASE_URL: http://app:8080
+    depends_on:
+      app:
+        condition: service_started
+    entrypoint: ["pytest"]
+
 volumes:
   db_data:

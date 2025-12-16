@@ -17,7 +17,7 @@ Authenticated REST + WebSocket API that powers drone deliveries: endusers place/
 | Swagger UI | http://localhost:8080/swagger/index.html |
 | OpenAPI spec | http://localhost:8080/swagger/doc.json |
 | Logs | `docker compose logs -f app` |
-| Tests | `make test` (or `cd tests/at && ./api_smoke.sh`) |
+| Tests | `make test` |
 
 Default seeded accounts:
 
@@ -67,7 +67,7 @@ This project follows **Domain-Driven Design (DDD)** principles with clear separa
 - **internal/interface** - HTTP routes (Gin), middleware, DTOs, WebSocket handler
 - **internal/repo** - MySQL repos with spatial coordinates + pagination
 - **migrations** - schema + seed users
-- **tests/at** - acceptance suites (bash + curl + websocket helpers)
+- **tests/acceptance** - pytest acceptance suites (HTTP + WebSocket helpers)
 
 The domain layer (`internal/model`) contains business entities and rules, while infrastructure concerns (HTTP, database, WebSocket) are isolated in outer layers. This makes the codebase testable, maintainable, and easy to extend.
 
@@ -83,7 +83,7 @@ make down      # docker compose down
 make logs      # follow container logs (app service)
 make build     # go build ./cmd/api -> bin/api
 make run       # go run ./cmd/api (local dev, needs DB running)
-make test      # acceptance suites in tests/at (expects API up)
+make test      # pytest acceptance suite (tests/acceptance, expects API up)
 make swagger   # regenerate docs with swag (uses $(go env GOPATH)/bin/swag)
 make clean     # remove bin + generated Swagger artifacts
 make deps      # go mod download + tidy
@@ -96,14 +96,26 @@ make tools     # go install github.com/swaggo/swag/cmd/swag@latest
 
 ## Testing
 
-Acceptance tests in `tests/at/` cover:
+Pytest-based acceptance tests live in `tests/acceptance/` and hit a running stack (defaults to `http://localhost:8080`, override with `BASE_URL`). Install the lightweight dependencies once:
+
+```bash
+python3 -m pip install -r tests/requirements.txt
+make test            # runs python-based acceptance suite
+BASE_URL=http://127.0.0.1:8080 python3 -m pytest  # manual invocation
+
+# Or via Docker once the stack is up
+docker compose up -d --build
+docker compose --profile test run --rm tests
+```
+
+The acceptance tests cover:
 - Auth (JWT issuance + role enforcement)
 - Enduser order lifecycle (create, cancel, track ETA/location)
 - Drone workflows (reserve/pickup/deliver/fail, broken/fixed handoff)
 - WebSocket heartbeat + assignment flow
 - Admin order/drones endpoints (filters, pagination, route updates)
 
-Run all: `make test` (or `cd tests/at && ./api_smoke.sh`).
+Run all: `make test`.
 
 **CI/CD:** GitHub Actions workflows automatically run all tests on push/PR (see `.github/workflows/`).
 
